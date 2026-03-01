@@ -12,22 +12,47 @@ export default function LoginForm({ onLogin }: { onLogin: () => void }) {
     setLoading(true);
     setError("");
     
-    const { supabase } = await import("../lib/supabaseClient");
-    if (!supabase) {
-      setError("Authentication service not available");
+    try {
+      const { supabase } = await import("../lib/supabaseClient");
+      if (!supabase) {
+        setError("Authentication service not available");
+        return;
+      }
+      
+      console.log("Attempting login with:", email);
+      
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Login timeout - please try again")), 10000);
+      });
+      
+      const loginPromise = supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      const { data, error: loginError } = await Promise.race([loginPromise, timeoutPromise]) as any;
+      
+      console.log("Login result:", { data, loginError });
+      
+      if (loginError) {
+        console.error("Login error:", loginError);
+        setError(loginError.message);
+      } else if (data.user) {
+        console.log("Login successful for user:", data.user.email);
+        onLogin();
+      } else {
+        setError("Login failed - no user data returned");
+      }
+    } catch (err: any) {
+      console.error("Unexpected login error:", err);
+      if (err.message === "Login timeout - please try again") {
+        setError("Login timed out - please check your connection and try again");
+      } else {
+        setError("An unexpected error occurred during login");
+      }
+    } finally {
       setLoading(false);
-      return;
-    }
-    
-    const { error: loginError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    setLoading(false);
-    if (loginError) {
-      setError(loginError.message);
-    } else {
-      onLogin();
     }
   };
 
