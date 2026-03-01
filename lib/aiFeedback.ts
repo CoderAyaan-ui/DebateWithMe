@@ -348,32 +348,45 @@ export class AIFeedbackService {
         return `CRITICAL ISSUE: As 1st Speaker, your job is to FRAME the debate, not just talk randomly. You failed to establish any framework or criteria for judging. When discussing "${this.extractSampleTopic(fullText)}", you must connect it to the motion's central question and establish HOW judges should evaluate this debate. Use "We win this debate if..." and define key terms. Your current approach shows zero understanding of 1st Speaker responsibilities.`;
       } else if (isRebuttalSpeaker) {
         return `CRITICAL ISSUE: As ${role}, your PRIMARY job is to REBUT the opposition and EXTEND your side's case. You showed zero rebuttal skills - no "however," "they said," or "opposition claims." When discussing "${this.extractSampleTopic(fullText)}", you must directly engage with what opponents will say. Your current speech would be completely irrelevant in an actual debate.`;
+      } else {
+        return `CRITICAL ISSUE: Your content lacks relevance to the debate. You must directly address the motion's core question and provide arguments that judges can evaluate. Focus on establishing clear positions and supporting them with reasoning.`;
       }
     } else if (relevanceScore < 0.6) {
       if (isFirstSpeaker) {
         return `MODERATE FRAMING with significant gaps. As 1st Speaker, you're not just making points - you're building the foundation for your entire team. When you mention "${this.extractSamplePhrase(fullText)}", you must immediately explain how this establishes your framework and criteria. Every point should serve to set up the debate structure for your later speakers.`;
       } else if (isRebuttalSpeaker) {
         return `MODERATE REBUTTAL with significant gaps. As ${role}, you must balance rebuttal with extension. Your speech touches on relevant topics but lacks direct engagement with opposition arguments. You need more "They will argue X, but actually Y" and "Even if they're right about X, we still win because Z" structures.`;
+      } else {
+        return `MODERATE CONTENT with significant gaps. Your arguments need stronger connection to the motion and clearer reasoning. Focus on developing your points more thoroughly and providing deeper analysis.`;
       }
     } else if (argumentDepth < 2) {
       if (isFirstSpeaker) {
         return `GOOD FRAMEWORK but shallow argumentation. As 1st Speaker, you identified relevant themes but don't develop them with proper reasoning. For each framing point, use "Claim-Warrant-Impact" structure: make your claim about why your framework is best, provide reasoning, then explain strategic impact. Your arguments lack the "because" and "therefore" connections that make your framework persuasive.`;
       } else if (isRebuttalSpeaker) {
         return `GOOD REBUTTAL PREPARATION but shallow extension. As ${role}, you need to both refute opponents and build your side. Your current approach has potential rebuttal but lacks depth. For each point, use "They say X, but actually Y because Z" structure, then extend with "This matters because..."`;
+      } else {
+        return `GOOD CONTENT but shallow argumentation. You identified relevant themes but don't develop them with proper reasoning. Use "Claim-Warrant-Impact" structure: make your claim, provide reasoning, then explain impact. Your arguments lack the "because" and "therefore" connections that make them persuasive.`;
       }
     } else if (!hasEvidence) {
       if (isFirstSpeaker) {
         return `STRONG FRAMEWORK but missing evidentiary support. Your reasoning about how to frame the debate is sound, but as 1st Speaker, you need to back your framework with specific examples, statistics, or expert opinions. For instance, when establishing criteria, cite: "According to debate theory expert Smith, good frameworks must be fair, measurable, and comprehensive."`;
       } else if (isRebuttalSpeaker) {
         return `STRONG REBUTTAL LOGIC but missing evidentiary support. Your reasoning about how to counter opposition is good, but as ${role}, you need specific examples and data. Instead of just saying "their economic argument fails," say "In Country X, similar policies led to 3% GDP growth according to World Bank data, proving their economic claims wrong."`;
+      } else {
+        return `STRONG CONTENT but missing evidentiary support. Your reasoning is sound, but you need specific examples, statistics, or expert opinions to back your claims. Use evidence to make your arguments more persuasive and credible.`;
       }
     } else {
       if (isFirstSpeaker) {
         return `EXCELLENT CONTENT with strong relevance and argumentation. Your speech effectively addresses the motion with well-reasoned points and evidentiary support. As ${role}, you demonstrate good understanding of the debate's core tensions and maintain consistent thematic focus throughout.`;
       } else if (isRebuttalSpeaker) {
         return `EXCELLENT ${role} PERFORMANCE with strong rebuttal and extension skills. You effectively balance refutation of opposition with development of your side's case. Your approach demonstrates mastery of rebuttal speaker responsibilities - direct engagement, strategic extension, and impact analysis.`;
+      } else {
+        return `EXCELLENT CONTENT with strong relevance and argumentation. Your speech effectively addresses the motion with well-reasoned points and evidentiary support. You demonstrate good understanding of the debate's core tensions and maintain consistent thematic focus throughout.`;
       }
     }
+    
+    // Default return for any unhandled cases
+    return `Your content shows mixed performance. As ${role}, focus on your specific responsibilities: ${isFirstSpeaker ? 'framework establishment and criteria definition' : 'direct rebuttal and strategic extension'}. Work on connecting your arguments to the central debate question and providing deeper analysis.`;
   }
 
   private static generateDetailedDeliveryFeedback(fillerRatio: number, pacingIssues: boolean, monotone: boolean, estimatedMinutes: number): string {
@@ -422,6 +435,8 @@ export class AIFeedbackService {
         return `EXCELLENT 1ST SPEAKER STRATEGY with proper framework establishment, structure, and impact analysis. Your speech demonstrates mastery of 1st Speaker responsibilities - setting up debate criteria, defining terms, and building foundation for your team's case.`;
       } else if (isRebuttalSpeaker) {
         return `EXCELLENT ${role} STRATEGY with proper rebuttal structure, examples, and impact analysis. Your speech demonstrates mastery of rebuttal speaker responsibilities - direct engagement with opposition, strategic extension, and effective weighing.`;
+      } else {
+        return `EXCELLENT STRATEGY with proper structure, examples, and impact analysis. Your speech demonstrates strong strategic thinking and effective debate techniques.`;
       }
     }
     
