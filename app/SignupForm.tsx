@@ -14,6 +14,12 @@ export default function SignupForm({ onSignup }: { onSignup: () => void }) {
     setLoading(true);
     setError("");
     
+    if (!supabase) {
+      setError("Authentication not available - please try again later");
+      setLoading(false);
+      return;
+    }
+    
     try {
       // Sign up user
       const { data, error: signUpError } = await supabase.auth.signUp({

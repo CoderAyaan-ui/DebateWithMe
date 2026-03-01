@@ -13,6 +13,12 @@ export default function LoginForm({ onLogin }: { onLogin: () => void }) {
     setLoading(true);
     setError("");
     
+    if (!supabase) {
+      setError("Authentication not available - please try again later");
+      setLoading(false);
+      return;
+    }
+    
     try {
       console.log("Attempting login with:", email);
       
