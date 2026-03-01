@@ -13,20 +13,32 @@ export default function Home() {
 
   // Check for existing login state on component mount
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    if (isLoggedIn) {
-      setLoggedIn(true);
+    try {
+      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      if (isLoggedIn) {
+        setLoggedIn(true);
+      }
+    } catch (error) {
+      console.error('Error checking login state:', error);
     }
   }, []);
 
   const handleLogin = () => {
-    setLoggedIn(true);
-    localStorage.setItem('isLoggedIn', 'true');
+    try {
+      setLoggedIn(true);
+      localStorage.setItem('isLoggedIn', 'true');
+    } catch (error) {
+      console.error('Error setting login state:', error);
+    }
   };
 
   const handleLogout = () => {
-    setLoggedIn(false);
-    localStorage.removeItem('isLoggedIn');
+    try {
+      setLoggedIn(false);
+      localStorage.removeItem('isLoggedIn');
+    } catch (error) {
+      console.error('Error clearing login state:', error);
+    }
   };
 
   if (loggedIn) {
