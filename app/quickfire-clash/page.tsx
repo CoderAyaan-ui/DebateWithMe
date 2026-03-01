@@ -24,8 +24,9 @@ export default function QuickfireClash() {
   const [winner, setWinner] = useState("");
   const [connectedPlayers, setConnectedPlayers] = useState(0);
   const [recognition, setRecognition] = useState<any>(null);
+  const [lobbyId] = useState("quickfire-clash-global");
 
-  // Generate random motion
+  // Generate random motion and player ID
   useEffect(() => {
     const quickfireMotions = [
       "This House Would ban social media for under-18s",
@@ -80,61 +81,78 @@ export default function QuickfireClash() {
     }
   }, []);
 
-  // Simple multiplayer simulation using localStorage
+  // Online multiplayer polling
   useEffect(() => {
     if (!gameStarted) return;
     
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       try {
-        // Get current game state from localStorage
-        const gameState = localStorage.getItem('quickfireGameState');
-        if (gameState) {
-          const state = JSON.parse(gameState);
-          
+        const response = await fetch(`/api/lobby?debateType=quickfire-clash&getTranscript=true`);
+        const data = await response.json();
+        
+        if (data) {
           // Update connected players
-          if (state.connectedPlayers !== connectedPlayers) {
-            setConnectedPlayers(state.connectedPlayers);
+          if (data.players && data.players.length !== connectedPlayers) {
+            setConnectedPlayers(data.players.length);
           }
           
           // Update current player
-          if (state.currentPlayer !== currentPlayer) {
-            setCurrentPlayer(state.currentPlayer);
+          if (data.currentSpeakerIndex !== undefined) {
+            setCurrentPlayer(data.currentSpeakerIndex + 1); // Convert 0-index to 1-index
           }
           
           // Update round
-          if (state.roundNumber !== roundNumber) {
-            setRoundNumber(state.roundNumber);
+          if (data.roundNumber !== undefined) {
+            setRoundNumber(data.roundNumber);
           }
           
           // Update timer
-          if (state.timeLeft !== timeLeft) {
-            setTimeLeft(state.timeLeft);
+          if (data.speakingTimeLeft !== undefined) {
+            setTimeLeft(data.speakingTimeLeft);
           }
           
           // Update speeches
-          if (state.player1Speech !== player1Speech) {
-            setPlayer1Speech(state.player1Speech);
-          }
-          if (state.player2Speech !== player2Speech) {
-            setPlayer2Speech(state.player2Speech);
+          if (data.allTranscripts) {
+            if (data.allTranscripts[0] !== player1Speech) {
+              setPlayer1Speech(data.allTranscripts[0]);
+            }
+            if (data.allTranscripts[1] !== player2Speech) {
+              setPlayer2Speech(data.allTranscripts[1]);
+            }
           }
           
-          // CRITICAL: Check if it's my turn
-          if (state.player1Id === playerId) {
-            // I am Player 1
-            setIsMyTurn(state.currentPlayer === 1);
-          } else if (state.player2Id === playerId) {
-            // I am Player 2
-            setIsMyTurn(state.currentPlayer === 2);
+          // Check if it's my turn
+          if (data.players && data.players.length > 0) {
+            const myPlayerIndex = data.players.findIndex((p: any) => p.id === playerId);
+            if (myPlayerIndex !== -1) {
+              setIsMyTurn(data.currentSpeakerIndex === myPlayerIndex);
+            }
+          }
+          
+          // Check if game is finished
+          if (data.debateFinished) {
+            setGameFinished(true);
+            if (data.allTranscripts && data.allTranscripts.length >= 2) {
+              const player1Score = data.allTranscripts[0].split(' ').length;
+              const player2Score = data.allTranscripts[1].split(' ').length;
+              
+              if (player1Score > player2Score) {
+                setWinner(`Player 1 wins! (${player1Score} words vs ${player2Score} words)`);
+              } else if (player2Score > player1Score) {
+                setWinner(`Player 2 wins! (${player2Score} words vs ${player1Score} words)`);
+              } else {
+                setWinner(`It's a tie! Both players spoke ${player1Score} words`);
+              }
+            }
           }
         }
       } catch (error) {
         console.error('Multiplayer sync error:', error);
       }
-    }, 1000);
+    }, 2000);
 
     return () => clearInterval(interval);
-  }, [gameStarted, playerId, currentPlayer, roundNumber, timeLeft, player1Speech, player2Speech, connectedPlayers]);
+  }, [gameStarted, playerId, connectedPlayers]);
 
   // Timer effect
   useEffect(() => {
@@ -143,14 +161,6 @@ export default function QuickfireClash() {
       interval = setInterval(() => {
         setTimeLeft((prev) => {
           const newTime = prev - 1;
-          // Update timer in localStorage
-          const gameState = localStorage.getItem('quickfireGameState');
-          if (gameState) {
-            const state = JSON.parse(gameState);
-            state.timeLeft = newTime;
-            localStorage.setItem('quickfireGameState', JSON.stringify(state));
-          }
-          
           if (newTime <= 0) {
             handleFinishSpeaking();
           }
@@ -161,43 +171,47 @@ export default function QuickfireClash() {
     return () => clearInterval(interval);
   }, [isSpeaking, timeLeft]);
 
-  const startGame = () => {
+  const startGame = async () => {
     setGameStarted(true);
     
-    // Initialize game state in localStorage
-    const gameState = {
-      connectedPlayers: 1,
-      currentPlayer: 1,
-      roundNumber: 1,
-      timeLeft: 45,
-      player1Id: playerId,
-      player2Id: '',
-      player1Speech: '',
-      player2Speech: '',
-      gameFinished: false
-    };
-    
-    localStorage.setItem('quickfireGameState', JSON.stringify(gameState));
-    setCurrentPlayer(1);
-    setIsMyTurn(true); // Player 1 always starts
-  };
-
-  const joinGame = () => {
-    setGameStarted(true);
-    
-    // Join existing game
-    const gameState = localStorage.getItem('quickfireGameState');
-    if (gameState) {
-      const state = JSON.parse(gameState);
-      state.connectedPlayers = 2;
-      state.player2Id = playerId;
-      localStorage.setItem('quickfireGameState', JSON.stringify(state));
-      setCurrentPlayer(state.currentPlayer);
-      setIsMyTurn(state.currentPlayer === 2); // Player 2's turn depends on current player
+    // Join the global lobby
+    try {
+      await fetch('/api/lobby', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          debateType: 'quickfire-clash',
+          userId: playerId,
+          userName: `Player ${playerId.substr(0, 4)}`,
+          action: 'join'
+        })
+      });
+    } catch (error) {
+      console.error('Join game error:', error);
     }
   };
 
-  const startSpeaking = () => {
+  const joinGame = async () => {
+    setGameStarted(true);
+    
+    // Join the global lobby
+    try {
+      await fetch('/api/lobby', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          debateType: 'quickfire-clash',
+          userId: playerId,
+          userName: `Player ${playerId.substr(0, 4)}`,
+          action: 'join'
+        })
+      });
+    } catch (error) {
+      console.error('Join game error:', error);
+    }
+  };
+
+  const startSpeaking = async () => {
     if (!recognition) {
       alert('Speech recognition not supported in your browser. Please use Chrome or Edge.');
       return;
@@ -210,16 +224,24 @@ export default function QuickfireClash() {
     
     recognition.start();
     
-    // Update game state
-    const gameState = localStorage.getItem('quickfireGameState');
-    if (gameState) {
-      const state = JSON.parse(gameState);
-      state.timeLeft = 45;
-      localStorage.setItem('quickfireGameState', JSON.stringify(state));
+    // Start speaking in lobby
+    try {
+      await fetch('/api/lobby', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          debateType: 'quickfire-clash',
+          userId: playerId,
+          userName: `Player ${playerId.substr(0, 4)}`,
+          action: 'start-speaking'
+        })
+      });
+    } catch (error) {
+      console.error('Start speaking error:', error);
     }
   };
 
-  const handleFinishSpeaking = () => {
+  const handleFinishSpeaking = async () => {
     setIsSpeaking(false);
     setIsListening(false);
     
@@ -227,56 +249,21 @@ export default function QuickfireClash() {
       recognition.stop();
     }
     
-    // Update game state with speech
-    const gameState = localStorage.getItem('quickfireGameState');
-    if (gameState) {
-      const state = JSON.parse(gameState);
-      
-      if (currentPlayer === 1) {
-        state.player1Speech = transcript;
-        setPlayer1Speech(transcript);
-      } else {
-        state.player2Speech = transcript;
-        setPlayer2Speech(transcript);
-      }
-      
-      // Check if game is finished
-      if (state.roundNumber >= 5) {
-        state.gameFinished = true;
-        setGameFinished(true);
-        
-        // Calculate winner
-        const player1Score = state.player1Speech.split(' ').length;
-        const player2Score = state.player2Speech.split(' ').length;
-        
-        if (player1Score > player2Score) {
-          setWinner(`Player 1 wins! (${player1Score} words vs ${player2Score} words)`);
-        } else if (player2Score > player1Score) {
-          setWinner(`Player 2 wins! (${player2Score} words vs ${player1Score} words)`);
-        } else {
-          setWinner(`It's a tie! Both players spoke ${player1Score} words`);
-        }
-      } else {
-        // Move to next round
-        state.roundNumber++;
-        state.currentPlayer = state.currentPlayer === 1 ? 2 : 1;
-        state.timeLeft = 45;
-        setRoundNumber(state.roundNumber);
-        setCurrentPlayer(state.currentPlayer);
-        setTimeLeft(45);
-        setTranscript("");
-        
-        // CRITICAL: Update my turn status for both players
-        if (state.player1Id === playerId) {
-          // I am Player 1
-          setIsMyTurn(state.currentPlayer === 1);
-        } else if (state.player2Id === playerId) {
-          // I am Player 2
-          setIsMyTurn(state.currentPlayer === 2);
-        }
-      }
-      
-      localStorage.setItem('quickfireGameState', JSON.stringify(state));
+    // Submit speech to lobby
+    try {
+      await fetch('/api/lobby', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          debateType: 'quickfire-clash',
+          userId: playerId,
+          userName: `Player ${playerId.substr(0, 4)}`,
+          action: 'submit-speech',
+          transcript: transcript
+        })
+      });
+    } catch (error) {
+      console.error('Submit speech error:', error);
     }
   };
 
@@ -295,7 +282,7 @@ export default function QuickfireClash() {
         {!gameStarted ? (
           // Start/Join Game Screen
           <div className="bg-blue-50 p-8 rounded-lg">
-            <h2 className="text-2xl font-bold text-blue-800 mb-4">Multiplayer Debate</h2>
+            <h2 className="text-2xl font-bold text-blue-800 mb-4">Online Multiplayer Debate</h2>
             <p className="text-gray-700 mb-6">
               Two players will debate the motion in 5 rounds of 45 seconds each.
               Take turns speaking and make your arguments count!
@@ -305,15 +292,12 @@ export default function QuickfireClash() {
                 onClick={startGame}
                 className="bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 transition text-lg font-semibold"
               >
-                Create New Game
-              </button>
-              <button
-                onClick={joinGame}
-                className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition text-lg font-semibold"
-              >
-                Join Existing Game
+                Join Online Game
               </button>
             </div>
+            <p className="text-sm text-gray-600 mt-4">
+              Anyone can join from anywhere! Both players click the same button.
+            </p>
           </div>
         ) : gameFinished ? (
           // Game Finished Screen
