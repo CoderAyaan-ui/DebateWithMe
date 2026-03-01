@@ -81,7 +81,8 @@ function SpeechDeliveryContent() {
 
   // Multiplayer polling for live transcript and speaker management
   useEffect(() => {
-    if (lobbyId && debateType) {
+    // Always run polling if we have debateType, with or without lobbyId
+    if (debateType) {
       const pollInterval = setInterval(async () => {
         try {
           const response = await fetch(`/api/lobby?debateType=${debateType}&getTranscript=true`);
@@ -126,7 +127,7 @@ function SpeechDeliveryContent() {
 
       return () => clearInterval(pollInterval);
     }
-  }, [lobbyId, debateType, searchParams]);
+  }, [debateType, searchParams]);
 
   // Update transcript when speaking and sync with server
   useEffect(() => {
@@ -392,44 +393,44 @@ function SpeechDeliveryContent() {
           </div>
         </div>
 
-        {/* Microphone Button - Only show when it's your turn */}
+        {/* Microphone Button - Show for testing, will be controlled by isMyTurn */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">
             {isMyTurn ? "Your Turn to Speak" : "Waiting for Your Turn"}
           </h2>
           
-          {isMyTurn ? (
-            <>
-              <MicrophoneButton
-                isListening={isListening}
-                isSupported={speechService.supported}
-                onStart={handleStartListening}
-                onStop={handleStopListening}
-              />
-              {error && (
-                <div className="mt-4 text-center text-red-600">
-                  {error}
-                </div>
-              )}
-              
-              {/* Finish Speech Button for Multiplayer */}
-              {lobbyId && (
-                <div className="mt-4 text-center">
-                  <button
-                    onClick={handleFinishSpeech}
-                    className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition"
-                  >
-                    Finish Speech & Next Speaker
-                  </button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-gray-600">
-                <p className="text-lg mb-2">⏳ Waiting for current speaker to finish...</p>
-                <p className="text-sm">You'll see the microphone button when it's your turn</p>
-              </div>
+          {/* Always show mic button for now - we'll control access via isMyTurn */}
+          <MicrophoneButton
+            isListening={isListening}
+            isSupported={speechService.supported}
+            onStart={handleStartListening}
+            onStop={handleStopListening}
+            disabled={!isMyTurn} // Disable when not your turn
+          />
+          
+          {error && (
+            <div className="mt-4 text-center text-red-600">
+              {error}
+            </div>
+          )}
+          
+          {/* Turn status indicator */}
+          {!isMyTurn && (
+            <div className="mt-4 text-center text-gray-600">
+              <p className="text-lg">⏳ It's not your turn yet</p>
+              <p className="text-sm">Waiting for: {currentSpeakerName}</p>
+            </div>
+          )}
+          
+          {/* Finish Speech Button for Multiplayer */}
+          {lobbyId && isMyTurn && (
+            <div className="mt-4 text-center">
+              <button
+                onClick={handleFinishSpeech}
+                className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition"
+              >
+                Finish Speech & Next Speaker
+              </button>
             </div>
           )}
         </div>
