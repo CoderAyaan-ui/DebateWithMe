@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { generateMotion } from "../../lib/debateUtils";
+import MicrophoneButton from "../../components/MicrophoneButton";
+import { SpeechToTextService } from "../../lib/speechToText";
 
 export default function QuickfireClash() {
   const router = useRouter();
@@ -21,6 +23,9 @@ export default function QuickfireClash() {
   const [currentUserId] = useState(() => Math.random().toString(36).substr(2, 9));
   const [debateFinished, setDebateFinished] = useState(false);
   const [winner, setWinner] = useState<string>("");
+  const [interimTranscript, setInterimTranscript] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const [speechService] = useState(() => new SpeechToTextService());
 
   // Get lobby info from URL
   const lobbyId = searchParams?.get('lobbyId') || '';
@@ -120,17 +125,57 @@ export default function QuickfireClash() {
     }
   }, [transcript, isMyTurn, isRecording, currentUserId]);
 
+  // Speech recognition setup
+  useEffect(() => {
+    // Speech recognition will be handled by the MicrophoneButton component
+  }, []);
+
+  const handleStartListening = () => {
+    if (!speechService.supported) {
+      alert('Speech recognition is not supported in your browser');
+      return;
+    }
+    speechService.startListening(
+      (text: string, isFinal: boolean) => {
+        setTranscript((prev) => prev + (isFinal ? ' ' : '') + text);
+        setInterimTranscript(isFinal ? '' : text);
+      },
+      (error: string) => {
+        console.error('Speech error:', error);
+        setIsListening(false);
+      },
+      () => {
+        setIsListening(true);
+        setInterimTranscript('');
+      },
+      () => {
+        setIsListening(false);
+        setInterimTranscript('');
+      }
+    );
+  };
+
+  const handleStopListening = () => {
+    speechService.stopListening();
+  };
+
   const handleStartSpeaking = () => {
     if (!isMyTurn) return;
     
     setIsSpeaking(true);
     setIsRecording(true);
+    setIsListening(true);
     setTimeLeft(45);
+    setTranscript('');
+    setInterimTranscript('');
+    handleStartListening();
   };
 
   const handleFinishSpeaking = () => {
     setIsSpeaking(false);
     setIsRecording(false);
+    setIsListening(false);
+    handleStopListening();
     
     // Move to next speaker or finish
     if (roundNumber < 5) {
@@ -242,6 +287,9 @@ export default function QuickfireClash() {
                 <h3 className="font-semibold mb-2">Your Speech:</h3>
                 <div className="text-left bg-white p-3 rounded min-h-[150px] max-h-[200px] overflow-y-auto">
                   {transcript || "Start speaking when it's your turn..."}
+                  {interimTranscript && (
+                    <span className="text-gray-500 italic"> {interimTranscript}</span>
+                  )}
                 </div>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -255,12 +303,12 @@ export default function QuickfireClash() {
             {/* Controls */}
             <div className="flex gap-4 justify-center">
               {isMyTurn && !isSpeaking && (
-                <button
-                  onClick={handleStartSpeaking}
-                  className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition"
-                >
-                  Start Speaking (45s)
-                </button>
+                <MicrophoneButton
+                  isListening={isListening}
+                  isSupported={speechService.supported}
+                  onStart={handleStartSpeaking}
+                  onStop={handleStopListening}
+                />
               )}
               {isMyTurn && isSpeaking && (
                 <button
