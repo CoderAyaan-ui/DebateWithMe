@@ -123,7 +123,7 @@ function SpeechDeliveryContent() {
         } catch (error) {
           console.error('Polling error:', error);
         }
-      }, 1000);
+      }, 2000); // Reduced from 1000ms to 2000ms to reduce lag
 
       return () => clearInterval(pollInterval);
     }

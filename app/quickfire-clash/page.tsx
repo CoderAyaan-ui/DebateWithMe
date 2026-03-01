@@ -69,7 +69,7 @@ export default function QuickfireClash() {
         } catch (error) {
           console.error('Polling error:', error);
         }
-      }, 1000);
+      }, 2000); // Reduced from 1000ms to 2000ms to reduce lag
 
       return () => clearInterval(pollInterval);
     }
@@ -270,12 +270,6 @@ export default function QuickfireClash() {
                   Finish Speaking
                 </button>
               )}
-              <button
-                onClick={handleBackToHome}
-                className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition"
-              >
-                Back to Home
-              </button>
             </div>
           </>
         )}
