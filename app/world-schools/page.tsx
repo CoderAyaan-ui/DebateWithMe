@@ -14,8 +14,14 @@ export default function WorldSchoolsDebate() {
 
   useEffect(() => {
     // Generate motion and role when component mounts
-    setMotion(generateMotion('world-schools'));
-    setRole(assignRole('world-schools'));
+    const timer = setTimeout(() => {
+      const newMotion = generateMotion('world-schools');
+      const newRole = assignRole('world-schools');
+      setMotion(newMotion);
+      setRole(newRole);
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const handleTimeUp = () => {

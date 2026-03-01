@@ -14,8 +14,14 @@ export default function BritishParliamentaryDebate() {
 
   useEffect(() => {
     // Generate motion and role when component mounts
-    setMotion(generateMotion('british-parliamentary'));
-    setRole(assignRole('british-parliamentary'));
+    const timer = setTimeout(() => {
+      const newMotion = generateMotion('british-parliamentary');
+      const newRole = assignRole('british-parliamentary');
+      setMotion(newMotion);
+      setRole(newRole);
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const handleTimeUp = () => {

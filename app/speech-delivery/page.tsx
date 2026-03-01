@@ -28,21 +28,27 @@ function SpeechDeliveryContent() {
     const motion = searchParams.get('motion') || '';
     const role = searchParams.get('role') || '';
     const speechText = searchParams.get('speechText') || '';
-    const debateType = (searchParams.get('debateType') as 'world-schools' | 'british-parliamentary') || 'world-schools';
-
+    const debateType = searchParams.get('debateType') as 'world-schools' | 'british-parliamentary' || 'world-schools';
+    
     if (!motion || !role || !speechText) {
       router.push('/');
       return;
     }
 
-    setSpeechData({ motion, role, speechText, debateType });
+    // Use setTimeout to avoid synchronous setState
+    const timer = setTimeout(() => {
+      setSpeechData({ motion, role, speechText, debateType });
+    }, 0);
 
     // Show prepare message after 2 seconds
-    const timer = setTimeout(() => {
+    const prepareTimer = setTimeout(() => {
       setShowPrepareMessage(true);
     }, 2000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(prepareTimer);
+    };
   }, [searchParams, router]);
 
   const handleStartListening = () => {

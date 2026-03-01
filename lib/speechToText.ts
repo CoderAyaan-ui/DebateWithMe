@@ -21,13 +21,18 @@ export interface SpeechRecognitionAlternative {
   confidence: number;
 }
 
+export interface SpeechRecognitionErrorEvent {
+  error: string;
+  message?: string;
+}
+
 export interface SpeechRecognition extends EventTarget {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
   maxAlternatives: number;
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: ((event: any) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
   onstart: (() => void) | null;
   onend: (() => void) | null;
   start(): void;
@@ -106,7 +111,7 @@ export class SpeechToTextService {
       }
     };
 
-    this.recognition.onerror = (event: any) => {
+    this.recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       let errorMessage = 'Speech recognition error';
       
       switch (event.error) {
@@ -134,7 +139,7 @@ export class SpeechToTextService {
 
     try {
       this.recognition.start();
-    } catch (error) {
+    } catch {
       onError('Failed to start speech recognition');
     }
   }

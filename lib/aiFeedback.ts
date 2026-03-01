@@ -24,7 +24,7 @@ export interface CompleteFeedback {
 
 export class AIFeedbackService {
   private static generateContentFeedback(data: FeedbackData): FeedbackSection {
-    const { motion, role, speechText, transcript, debateType } = data;
+    const { motion, role, speechText, transcript } = data;
     const fullText = speechText + ' ' + transcript;
     
     // HARSH evaluation for short content
@@ -91,7 +91,7 @@ export class AIFeedbackService {
       return {
         title: 'Delivery',
         score: 15,
-        feedback: "UNACCEPTABLE: Your speech was far too short for proper evaluation. A debate speech requires 3-4 minutes minimum to demonstrate delivery skills. Two words is not a speech - it's barely a sentence. In competitive debate, you'd lose the round automatically for insufficient material. You need to speak for at least 400-500 words to even begin demonstrating basic delivery competence.",
+        feedback: "UNACCEPTABLE: Your speech was far too short for proper evaluation. A debate speech requires 3-4 minutes minimum to demonstrate delivery skills. Two words is not a speech - it&apos;s barely a sentence. In competitive debate, you&apos;d lose the round automatically for insufficient material. You need to speak for at least 400-500 words to even begin demonstrating basic delivery competence.",
         strengths: [],
         improvements: [
           "Speak for at least 3-4 minutes minimum (400-500 words)",
@@ -138,7 +138,7 @@ export class AIFeedbackService {
   }
 
   private static generateStrategyFeedback(data: FeedbackData): FeedbackSection {
-    const { motion, role, speechText, transcript, debateType } = data;
+    const { motion, role, speechText, transcript } = data;
     const fullText = speechText + ' ' + transcript;
     
     if (!fullText || fullText.split(' ').length < 50) {
@@ -358,7 +358,7 @@ export class AIFeedbackService {
       hasExamples,
       hasImpact,
       logicalFallacies,
-      detailedFeedback: this.generateDetailedStrategyFeedback(hasStructure, hasExamples, hasImpact, logicalFallacies, role, fullText),
+      detailedFeedback: this.generateDetailedStrategyFeedback(hasStructure, hasExamples, hasImpact, logicalFallacies, role),
       specificStrengths: this.generateSpecificStrategyStrengths(hasStructure, hasExamples, hasImpact, fullText),
       specificImprovements: this.generateSpecificStrategyImprovements(hasStructure, hasExamples, hasImpact, role, fullText)
     };
@@ -446,7 +446,7 @@ export class AIFeedbackService {
     return feedback;
   }
 
-  private static generateDetailedStrategyFeedback(hasStructure: boolean, hasExamples: boolean, hasImpact: boolean, logicalFallacies: number, role: string, fullText: string): string {
+  private static generateDetailedStrategyFeedback(hasStructure: boolean, hasExamples: boolean, hasImpact: boolean, logicalFallacies: number, role: string): string {
     const isFirstSpeaker = role.includes('1st Speaker');
     const isRebuttalSpeaker = role.includes('2nd Speaker') || role.includes('3rd Speaker');
     
