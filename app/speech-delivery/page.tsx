@@ -30,8 +30,18 @@ function SpeechDeliveryContent() {
     const speechText = searchParams?.get('speechText') || '';
     const debateType = (searchParams?.get('debateType') as 'world-schools' | 'british-parliamentary') || 'world-schools';
     
+    // For multiplayer, generate default values if parameters missing
     if (!motion || !role || !speechText) {
-      router.push('/');
+      const defaultMotion = "This house believes that technology has made us less connected";
+      const defaultRole = "1st Speaker";
+      const defaultSpeechText = "Prepare your arguments for this debate...";
+      
+      setSpeechData({ 
+        motion: motion || defaultMotion, 
+        role: role || defaultRole, 
+        speechText: speechText || defaultSpeechText, 
+        debateType 
+      });
       return;
     }
 

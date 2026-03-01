@@ -39,13 +39,7 @@ export default function QuickfireClash() {
     setSelectedMotion(randomMotion);
   }, []);
 
-  useEffect(() => {
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    if (!isLoggedIn) {
-      router.push('/');
-    }
-  }, [router]);
+  // No authentication check - allow direct access
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
