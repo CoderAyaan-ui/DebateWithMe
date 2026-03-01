@@ -25,10 +25,10 @@ function SpeechDeliveryContent() {
 
   useEffect(() => {
     // Parse speech data from URL parameters
-    const motion = searchParams.get('motion') || '';
-    const role = searchParams.get('role') || '';
-    const speechText = searchParams.get('speechText') || '';
-    const debateType = searchParams.get('debateType') as 'world-schools' | 'british-parliamentary' || 'world-schools';
+    const motion = searchParams?.get('motion') || '';
+    const role = searchParams?.get('role') || '';
+    const speechText = searchParams?.get('speechText') || '';
+    const debateType = (searchParams?.get('debateType') as 'world-schools' | 'british-parliamentary') || 'world-schools';
     
     if (!motion || !role || !speechText) {
       router.push('/');

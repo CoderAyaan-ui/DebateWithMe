@@ -2,7 +2,9 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import MultiplayerManager, { Player, Lobby } from "../../lib/multiplayerManager";
+import { GlobalMultiplayerManager } from "../../lib/globalMultiplayerManager";
+import { Lobby, Player } from "../../lib/multiplayerManager";
+import { generateMotion, assignRole } from "../../lib/debateUtils";
 
 function MultiplayerContent() {
   const router = useRouter();
@@ -13,50 +15,49 @@ function MultiplayerContent() {
   const [debateFound, setDebateFound] = useState(false);
   const [currentUserId] = useState(() => Math.random().toString(36).substr(2, 9));
   const [userName] = useState(() => `Player ${currentUserId.substr(0, 4)}`);
-  const [multiplayerManager] = useState(() => MultiplayerManager.getInstance());
+  const [multiplayerManager] = useState(() => new GlobalMultiplayerManager());
 
   useEffect(() => {
-    const type = searchParams.get('type') as 'world-schools' | 'british-parliamentary' | 'quickfire-clash';
+    const type = searchParams?.get('type') as 'world-schools' | 'british-parliamentary' | 'quickfire-clash';
     if (type) {
       setDebateType(type);
       setIsSearching(true);
       
       // Join or create lobby
-      const lobby = multiplayerManager.createOrJoinLobby(type, currentUserId, userName);
-      setCurrentLobby(lobby);
+      multiplayerManager.createOrJoinLobby(type, currentUserId, userName)
+        .then(lobby => {
+          setCurrentLobby(lobby);
+          
+          // Start polling for updates
+          multiplayerManager.startPolling(type, (updatedLobby) => {
+            setCurrentLobby(updatedLobby);
+            
+            // Check if lobby is full
+            if (updatedLobby.players.length >= updatedLobby.requiredPlayers) {
+              setDebateFound(true);
+              setIsSearching(false);
+              
+              // Navigate to debate after 2 seconds
+              setTimeout(() => {
+                if (type === 'quickfire-clash') {
+                  router.push(`/quickfire-clash?lobbyId=${updatedLobby.id}`);
+                } else {
+                  router.push(`/speech-delivery?motion=${encodeURIComponent('This house believes that technology has made us less connected')}&role=1st Speaker&debateType=${type}&lobbyId=${updatedLobby.id}`);
+                }
+              }, 2000);
+            }
+          });
+        })
+        .catch(error => {
+          console.error('Failed to join lobby:', error);
+          setIsSearching(false);
+        });
     }
-  }, [searchParams, currentUserId, userName, multiplayerManager]);
 
-  useEffect(() => {
-    if (!currentLobby) return;
-
-    // Set up polling for real-time updates
-    const stopPolling = multiplayerManager.pollForUpdates((lobbies) => {
-      const updatedLobby = lobbies.get(currentLobby.id);
-      if (updatedLobby && JSON.stringify(updatedLobby) !== JSON.stringify(currentLobby)) {
-        setCurrentLobby(updatedLobby);
-        
-        // Check if lobby is full and debate should start
-        if (updatedLobby.players.length >= updatedLobby.requiredPlayers && !updatedLobby.isActive) {
-          setDebateFound(true);
-          startDebate(updatedLobby);
-        }
-      }
-    });
-
-    return () => stopPolling();
-  }, [currentLobby?.id, multiplayerManager]); // Only depend on lobby ID, not the whole lobby object
-
-  const startDebate = (lobby: Lobby) => {
-    // Generate motion and start debate
-    const motion = generateMotion(lobby.debateType);
-    multiplayerManager.startDebate(lobby.id, motion);
-    
-    // Navigate to debate after 2 seconds
-    setTimeout(() => {
-      navigateToDebate(lobby);
-    }, 2000);
-  };
+    return () => {
+      multiplayerManager.stopPolling();
+    };
+  }, [searchParams, currentUserId, userName, multiplayerManager, router]);
 
   const navigateToDebate = (lobby: Lobby) => {
     const role = assignRole(lobby.debateType, currentUserId, lobby.players);
@@ -142,9 +143,8 @@ function MultiplayerContent() {
   };
 
   const handleCancelSearch = () => {
-    if (currentLobby) {
-      multiplayerManager.leaveLobby(currentUserId);
-    }
+    multiplayerManager.stopPolling();
+    setCurrentLobby(null);
     setIsSearching(false);
     router.push('/');
   };

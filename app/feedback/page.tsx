@@ -2,15 +2,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DebatelyChatbot from './components/DebatelyChatbot';
-import { AIFeedbackService, CompleteFeedback } from '../../lib/aiFeedback';
-
-interface FeedbackData {
-  motion: string;
-  role: string;
-  speechText: string;
-  transcript: string;
-  debateType: 'world-schools' | 'british-parliamentary';
-}
+import { AIFeedbackService, FeedbackData, CompleteFeedback } from "../../lib/aiFeedback";
 
 function FeedbackContent() {
   const router = useRouter();
@@ -22,11 +14,11 @@ function FeedbackContent() {
 
   useEffect(() => {
     // Parse feedback data from URL parameters
-    const motion = searchParams.get('motion') || '';
-    const role = searchParams.get('role') || '';
-    const speechText = searchParams.get('speechText') || '';
-    const transcript = searchParams.get('transcript') || '';
-    const debateType = (searchParams.get('debateType') as 'world-schools' | 'british-parliamentary') || 'world-schools';
+    const motion = searchParams?.get('motion') || '';
+    const role = searchParams?.get('role') || '';
+    const speechText = searchParams?.get('speechText') || '';
+    const transcript = searchParams?.get('transcript') || '';
+    const debateType = (searchParams?.get('debateType') as 'world-schools' | 'british-parliamentary') || 'world-schools';
 
     if (!motion || !role) {
       router.push('/');

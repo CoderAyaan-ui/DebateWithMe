@@ -48,14 +48,14 @@ function FeedbackDetailContent() {
     }
     
     // Fallback to URL parameters if localStorage doesn't work
-    const detail = searchParams.get('detail');
-    const type = searchParams.get('type') || 'content';
-    const title = searchParams.get('title') || '';
-    const description = searchParams.get('description') || '';
-    const speechExample = searchParams.get('speechExample') || '';
-    const goodExample = searchParams.get('goodExample') || '';
-    const technique = searchParams.get('technique') || '';
-    const practiceAdvice = searchParams.get('practiceAdvice') || '';
+    const detail = searchParams?.get('detail');
+    const type = searchParams?.get('type') || 'content';
+    const title = searchParams?.get('title') || '';
+    const description = searchParams?.get('description') || '';
+    const speechExample = searchParams?.get('speechExample') || '';
+    const goodExample = searchParams?.get('goodExample') || '';
+    const technique = searchParams?.get('technique') || '';
+    const practiceAdvice = searchParams?.get('practiceAdvice') || '';
 
     // Set feedback detail if we have valid parameters
     if (detail && title && description && speechExample && goodExample && technique && practiceAdvice) {
