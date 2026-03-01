@@ -168,7 +168,26 @@ export default function QuickfireClash() {
     setTimeLeft(45);
     setTranscript('');
     setInterimTranscript('');
-    handleStartListening();
+    
+    // Start speech recognition
+    speechService.startListening(
+      (text: string, isFinal: boolean) => {
+        setTranscript((prev) => prev + (isFinal ? ' ' : '') + text);
+        setInterimTranscript(isFinal ? '' : text);
+      },
+      (error: string) => {
+        console.error('Speech error:', error);
+        setIsListening(false);
+      },
+      () => {
+        setIsListening(true);
+        setInterimTranscript('');
+      },
+      () => {
+        setIsListening(false);
+        setInterimTranscript('');
+      }
+    );
   };
 
   const handleFinishSpeaking = () => {
@@ -307,7 +326,7 @@ export default function QuickfireClash() {
                   isListening={isListening}
                   isSupported={speechService.supported}
                   onStart={handleStartSpeaking}
-                  onStop={handleStopListening}
+                  onStop={handleFinishSpeaking}
                 />
               )}
               {isMyTurn && isSpeaking && (
