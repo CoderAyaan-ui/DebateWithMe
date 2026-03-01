@@ -36,10 +36,25 @@ export default function handler(req, res) {
     if (getTranscript) {
       const transcript = globalTranscripts.get(lobbyId) || '';
       const allTranscripts = debateTranscripts.get(lobbyId) || [];
-      return res.status(200).json({ ...lobby, transcript, allTranscripts });
+      return res.status(200).json({
+        currentSpeakerIndex: lobby.currentSpeakerIndex,
+        speakingTimeLeft: lobby.speakingTimeLeft,
+        roundNumber: lobby.roundNumber,
+        debateFinished: lobby.debateFinished,
+        players: lobby.players,
+        transcript,
+        allTranscripts
+      });
     }
 
-    return res.status(200).json(lobby);
+    return res.status(200).json({
+      currentSpeakerIndex: lobby.currentSpeakerIndex,
+      speakingTimeLeft: lobby.speakingTimeLeft,
+      roundNumber: lobby.roundNumber,
+      debateFinished: lobby.debateFinished,
+      players: lobby.players,
+      allTranscripts: lobby.allTranscripts || []
+    });
   }
 
   if (req.method === 'POST') {
@@ -121,13 +136,27 @@ export default function handler(req, res) {
       }
       
       globalLobbies.set(lobbyId, lobby);
-      return res.status(200).json({ ...lobby });
+      return res.status(200).json({
+        currentSpeakerIndex: lobby.currentSpeakerIndex,
+        speakingTimeLeft: lobby.speakingTimeLeft,
+        roundNumber: lobby.roundNumber,
+        debateFinished: lobby.debateFinished,
+        players: lobby.players,
+        allTranscripts: lobby.allTranscripts || []
+      });
     }
 
     if (action === 'finish-debate') {
       lobby.debateFinished = true;
       globalLobbies.set(lobbyId, lobby);
-      return res.status(200).json({ ...lobby });
+      return res.status(200).json({
+        currentSpeakerIndex: lobby.currentSpeakerIndex,
+        speakingTimeLeft: lobby.speakingTimeLeft,
+        roundNumber: lobby.roundNumber,
+        debateFinished: lobby.debateFinished,
+        players: lobby.players,
+        allTranscripts: lobby.allTranscripts || []
+      });
     }
 
     // Reset lobby if full or active
