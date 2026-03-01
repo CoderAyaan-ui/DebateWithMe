@@ -212,7 +212,14 @@ export class AIFeedbackService {
   }
 
   // Advanced analysis methods
-  private static analyzeContentQuality(motion: string, fullText: string, role: string) {
+  private static analyzeContentQuality(motion: string, fullText: string, role: string): {
+    baseScore: number;
+    framingQuality: number;
+    rebuttalQuality: number;
+    detailedFeedback: string;
+    specificStrengths: string[];
+    specificImprovements: string[];
+  } {
     const text = fullText.toLowerCase();
     const motionWords = motion.toLowerCase().split(/\s+/);
     
@@ -258,7 +265,16 @@ export class AIFeedbackService {
     };
   }
 
-  private static analyzeDeliveryQuality(transcript: string) {
+  private static analyzeDeliveryQuality(transcript: string): {
+    baseScore: number;
+    fillerRatio: number;
+    pacingIssues: boolean;
+    monotone: boolean;
+    estimatedMinutes: number;
+    detailedFeedback: string;
+    specificStrengths: string[];
+    specificImprovements: string[];
+  } {
     const words = transcript.split(' ');
     const wordCount = words.length;
     
@@ -289,13 +305,23 @@ export class AIFeedbackService {
       fillerRatio,
       pacingIssues,
       monotone,
+      estimatedMinutes,
       detailedFeedback: this.generateDetailedDeliveryFeedback(fillerRatio, pacingIssues, monotone, estimatedMinutes),
       specificStrengths: this.generateSpecificDeliveryStrengths(fillerRatio, pacingIssues, monotone),
       specificImprovements: this.generateSpecificDeliveryImprovements(fillerRatio, pacingIssues, monotone, estimatedMinutes)
     };
   }
 
-  private static analyzeStrategicQuality(motion: string, fullText: string, role: string) {
+  private static analyzeStrategicQuality(motion: string, fullText: string, role: string): {
+    baseScore: number;
+    hasStructure: boolean;
+    hasExamples: boolean;
+    hasImpact: boolean;
+    logicalFallacies: number;
+    detailedFeedback: string;
+    specificStrengths: string[];
+    specificImprovements: string[];
+  } {
     const text = fullText.toLowerCase();
     
     // Structure analysis
