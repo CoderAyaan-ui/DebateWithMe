@@ -2,35 +2,28 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { generateMotion } from "../../lib/debateUtils";
-import MicrophoneButton from "../../components/MicrophoneButton";
-import { SpeechToTextService } from "../../lib/speechToText";
 
 export default function QuickfireClash() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  // Basic states
   const [selectedMotion, setSelectedMotion] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [timeLeft, setTimeLeft] = useState(45);
   const [transcript, setTranscript] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [debateFinished, setDebateFinished] = useState(false);
+  const [winner, setWinner] = useState("");
+  const [currentUserId] = useState(() => Math.random().toString(36).substr(2, 9));
+  const [lobbyId] = useState(() => searchParams?.get('lobbyId') || '');
   const [currentSpeakerIndex, setCurrentSpeakerIndex] = useState(0);
   const [roundNumber, setRoundNumber] = useState(1);
   const [otherPlayerTranscript, setOtherPlayerTranscript] = useState("");
   const [isMyTurn, setIsMyTurn] = useState(false);
   const [players, setPlayers] = useState<any[]>([]);
-  const [currentUserId] = useState(() => Math.random().toString(36).substr(2, 9));
-  const [debateFinished, setDebateFinished] = useState(false);
-  const [winner, setWinner] = useState<string>("");
-  const [interimTranscript, setInterimTranscript] = useState("");
-  const [isListening, setIsListening] = useState(false);
-  const [speechService] = useState(() => new SpeechToTextService());
 
-  // Get lobby info from URL
-  const lobbyId = searchParams?.get('lobbyId') || '';
-
-  // Generate random motion on component mount
+  // Generate random motion
   useEffect(() => {
     const quickfireMotions = [
       "This House Would ban social media for under-18s",
@@ -48,6 +41,23 @@ export default function QuickfireClash() {
     setSelectedMotion(randomMotion);
   }, []);
 
+  // Simple timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isSpeaking && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft((prev) => {
+          const newTime = prev - 1;
+          if (newTime <= 0) {
+            handleFinishSpeaking();
+          }
+          return newTime;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isSpeaking, timeLeft]);
+
   // Poll for multiplayer updates
   useEffect(() => {
     if (lobbyId) {
@@ -56,12 +66,10 @@ export default function QuickfireClash() {
           const response = await fetch(`/api/lobby?debateType=quickfire-clash&getTranscript=true`);
           const data = await response.json();
           
-          // Update other player's transcript
           if (data.transcript && data.transcript !== transcript) {
             setOtherPlayerTranscript(data.transcript);
           }
           
-          // Update speaker info
           if (data.currentSpeakerIndex !== undefined) {
             setCurrentSpeakerIndex(data.currentSpeakerIndex);
             const myPlayerIndex = data.players?.findIndex((p: any) => p.id === currentUserId);
@@ -74,127 +82,78 @@ export default function QuickfireClash() {
         } catch (error) {
           console.error('Polling error:', error);
         }
-      }, 2000); // Reduced from 1000ms to 2000ms to reduce lag
+      }, 2000);
 
       return () => clearInterval(pollInterval);
     }
   }, [lobbyId, currentUserId, transcript]);
 
-  // Timer effect with multiplayer sync
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isSpeaking && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prevTime) => {
-          const newTime = prevTime - 1;
-          // Update timer on server for other players
-          fetch('/api/lobby', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              debateType: 'quickfire-clash',
-              userId: currentUserId,
-              userName: 'Player',
-              action: 'update-timer',
-              timeLeft: newTime
-            })
-          });
-          return newTime;
-        });
-      }, 1000);
-    } else if (timeLeft === 0 && isSpeaking) {
-      handleFinishSpeaking();
-    }
-    return () => clearInterval(interval);
-  }, [isSpeaking, timeLeft, currentUserId]);
-
-  // Update transcript when recording
-  useEffect(() => {
-    if (isMyTurn && isRecording && transcript) {
-      fetch('/api/lobby', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          debateType: 'quickfire-clash',
-          userId: currentUserId,
-          userName: 'Player',
-          action: 'update-transcript',
-          transcript
-        })
-      });
-    }
-  }, [transcript, isMyTurn, isRecording, currentUserId]);
-
-  // Speech recognition setup
-  useEffect(() => {
-    // Speech recognition will be handled by the MicrophoneButton component
-  }, []);
-
-  const handleStartListening = () => {
-    if (!speechService.supported) {
-      alert('Speech recognition is not supported in your browser');
-      return;
-    }
-    speechService.startListening(
-      (text: string, isFinal: boolean) => {
-        setTranscript((prev) => prev + (isFinal ? ' ' : '') + text);
-        setInterimTranscript(isFinal ? '' : text);
-      },
-      (error: string) => {
-        console.error('Speech error:', error);
-        setIsListening(false);
-      },
-      () => {
-        setIsListening(true);
-        setInterimTranscript('');
-      },
-      () => {
-        setIsListening(false);
-        setInterimTranscript('');
-      }
-    );
-  };
-
-  const handleStopListening = () => {
-    speechService.stopListening();
-  };
-
-  const handleStartSpeaking = () => {
+  // Simple speech recognition
+  const startSpeaking = () => {
     if (!isMyTurn) return;
     
     setIsSpeaking(true);
-    setIsRecording(true);
     setIsListening(true);
     setTimeLeft(45);
-    setTranscript('');
-    setInterimTranscript('');
+    setTranscript("");
     
-    // Start speech recognition
-    speechService.startListening(
-      (text: string, isFinal: boolean) => {
-        setTranscript((prev) => prev + (isFinal ? ' ' : '') + text);
-        setInterimTranscript(isFinal ? '' : text);
-      },
-      (error: string) => {
-        console.error('Speech error:', error);
+    // Simple Web Speech API
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event: any) => {
+        let finalTranscript = '';
+        let interimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) {
+            finalTranscript += result[0].transcript + ' ';
+          } else {
+            interimTranscript += result[0].transcript;
+          }
+        }
+        
+        setTranscript((prev) => prev + finalTranscript);
+        
+        // Update server with transcript
+        fetch('/api/lobby', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            debateType: 'quickfire-clash',
+            userId: currentUserId,
+            userName: 'Player',
+            action: 'update-transcript',
+            transcript: transcript + finalTranscript
+          })
+        });
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error('Speech error:', event.error);
         setIsListening(false);
-      },
-      () => {
-        setIsListening(true);
-        setInterimTranscript('');
-      },
-      () => {
+      };
+      
+      recognition.onend = () => {
         setIsListening(false);
-        setInterimTranscript('');
-      }
-    );
+      };
+      
+      recognition.start();
+    } else {
+      // Fallback to manual input
+      alert('Speech recognition not supported. Please type your argument.');
+    }
   };
 
   const handleFinishSpeaking = () => {
     setIsSpeaking(false);
-    setIsRecording(false);
     setIsListening(false);
-    handleStopListening();
     
     // Move to next speaker or finish
     if (roundNumber < 5) {
@@ -209,14 +168,12 @@ export default function QuickfireClash() {
         })
       });
     } else {
-      // Debate finished - determine winner
       determineWinner();
     }
   };
 
-  const determineWinner = async () => {
+  const determineWinner = () => {
     setDebateFinished(true);
-    // Simple AI judging based on transcript length and content
     const myScore = transcript.length + (transcript.split(' ').length * 2);
     const opponentScore = otherPlayerTranscript.length + (otherPlayerTranscript.split(' ').length * 2);
     
@@ -227,24 +184,6 @@ export default function QuickfireClash() {
     
     setWinner(`${winnerName} won! ${reason}`);
   };
-
-  const handleBackToHome = () => {
-    router.push('/');
-  };
-
-  // Navigate to feedback when showFeedback is true
-  useEffect(() => {
-    if (showFeedback) {
-      const params = new URLSearchParams({
-        motion: selectedMotion,
-        role: 'Speaker',
-        speechText: transcript,
-        transcript: transcript,
-        debateType: 'quickfire-clash'
-      });
-      router.push(`/feedback?${params.toString()}`);
-    }
-  }, [showFeedback, transcript, selectedMotion, router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-white">
@@ -306,9 +245,7 @@ export default function QuickfireClash() {
                 <h3 className="font-semibold mb-2">Your Speech:</h3>
                 <div className="text-left bg-white p-3 rounded min-h-[150px] max-h-[200px] overflow-y-auto">
                   {transcript || "Start speaking when it's your turn..."}
-                  {interimTranscript && (
-                    <span className="text-gray-500 italic"> {interimTranscript}</span>
-                  )}
+                  {isListening && <span className="text-red-500"> 🎤 Listening...</span>}
                 </div>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -319,22 +256,22 @@ export default function QuickfireClash() {
               </div>
             </div>
 
-            {/* Controls */}
+            {/* Simple Controls */}
             <div className="flex gap-4 justify-center">
               {isMyTurn && !isSpeaking && (
-                <MicrophoneButton
-                  isListening={isListening}
-                  isSupported={speechService.supported}
-                  onStart={handleStartSpeaking}
-                  onStop={handleFinishSpeaking}
-                />
+                <button
+                  onClick={startSpeaking}
+                  className="bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 transition text-lg font-semibold"
+                >
+                  🎤 Start Speaking (45s)
+                </button>
               )}
               {isMyTurn && isSpeaking && (
                 <button
                   onClick={handleFinishSpeaking}
-                  className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition"
+                  className="bg-red-600 text-white px-8 py-4 rounded-lg hover:bg-red-700 transition text-lg font-semibold"
                 >
-                  Finish Speaking
+                  ⏹️ Finish Speaking
                 </button>
               )}
             </div>
