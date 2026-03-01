@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { supabase } from "../lib/supabaseClient";
 
 export default function LoginForm({ onLogin }: { onLogin: () => void }) {
   const [email, setEmail] = useState("");
@@ -12,6 +11,14 @@ export default function LoginForm({ onLogin }: { onLogin: () => void }) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    
+    const { supabase } = await import("../lib/supabaseClient");
+    if (!supabase) {
+      setError("Authentication service not available");
+      setLoading(false);
+      return;
+    }
+    
     const { error: loginError } = await supabase.auth.signInWithPassword({
       email,
       password,
