@@ -119,9 +119,14 @@ export default function QuickfireClash() {
             setPlayer2Speech(state.player2Speech);
           }
           
-          // Check if it's my turn
-          const myPlayerNum = state.player1Id === playerId ? 1 : 2;
-          setIsMyTurn(state.currentPlayer === myPlayerNum);
+          // CRITICAL: Check if it's my turn
+          if (state.player1Id === playerId) {
+            // I am Player 1
+            setIsMyTurn(state.currentPlayer === 1);
+          } else if (state.player2Id === playerId) {
+            // I am Player 2
+            setIsMyTurn(state.currentPlayer === 2);
+          }
         }
       } catch (error) {
         console.error('Multiplayer sync error:', error);
@@ -173,7 +178,8 @@ export default function QuickfireClash() {
     };
     
     localStorage.setItem('quickfireGameState', JSON.stringify(gameState));
-    setIsMyTurn(true);
+    setCurrentPlayer(1);
+    setIsMyTurn(true); // Player 1 always starts
   };
 
   const joinGame = () => {
@@ -186,7 +192,8 @@ export default function QuickfireClash() {
       state.connectedPlayers = 2;
       state.player2Id = playerId;
       localStorage.setItem('quickfireGameState', JSON.stringify(state));
-      setIsMyTurn(false);
+      setCurrentPlayer(state.currentPlayer);
+      setIsMyTurn(state.currentPlayer === 2); // Player 2's turn depends on current player
     }
   };
 
@@ -259,9 +266,14 @@ export default function QuickfireClash() {
         setTimeLeft(45);
         setTranscript("");
         
-        // Update my turn status
-        const myPlayerNum = state.player1Id === playerId ? 1 : 2;
-        setIsMyTurn(state.currentPlayer === myPlayerNum);
+        // CRITICAL: Update my turn status for both players
+        if (state.player1Id === playerId) {
+          // I am Player 1
+          setIsMyTurn(state.currentPlayer === 1);
+        } else if (state.player2Id === playerId) {
+          // I am Player 2
+          setIsMyTurn(state.currentPlayer === 2);
+        }
       }
       
       localStorage.setItem('quickfireGameState', JSON.stringify(state));
