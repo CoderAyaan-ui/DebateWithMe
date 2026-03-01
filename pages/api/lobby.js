@@ -1,8 +1,20 @@
 // Global lobby state (in production, this would be in a database)
 const globalLobbies = new Map();
 const globalTranscripts = new Map(); // Store live transcripts
-const globalTimers = new Map(); // Store speaking timers
 const debateTranscripts = new Map(); // Store individual speech transcripts for judging
+
+function getRequiredPlayers(debateType) {
+  switch (debateType) {
+    case 'quickfire-clash':
+      return 2;
+    case 'world-schools':
+      return 6;
+    case 'british-parliamentary':
+      return 8;
+    default:
+      return 2;
+  }
+}
 
 export default function handler(req, res) {
   if (req.method === 'GET') {
@@ -24,7 +36,7 @@ export default function handler(req, res) {
         createdAt: new Date().toISOString(),
         isActive: false,
         currentSpeakerIndex: 0,
-        speakingTimeLeft: debateType === 'quickfire-clash' ? 45 : 480, // 8 minutes for formal debates
+        speakingTimeLeft: debateType === 'quickfire-clash' ? 45 : 480,
         roundNumber: 1,
         debateFinished: false,
         allTranscripts: []
@@ -85,6 +97,33 @@ export default function handler(req, res) {
     }
 
     // Handle different actions
+    if (action === 'join') {
+      // Check if player already exists
+      const existingPlayer = lobby.players.find(p => p.id === userId);
+      if (!existingPlayer) {
+        lobby.players.push({
+          id: userId,
+          name: userName,
+          joinedAt: new Date().toISOString()
+        });
+      }
+      
+      // Activate lobby when enough players join
+      if (lobby.players.length >= lobby.requiredPlayers) {
+        lobby.isActive = true;
+      }
+      
+      globalLobbies.set(lobbyId, lobby);
+      return res.status(200).json({
+        currentSpeakerIndex: lobby.currentSpeakerIndex,
+        speakingTimeLeft: lobby.speakingTimeLeft,
+        roundNumber: lobby.roundNumber,
+        debateFinished: lobby.debateFinished,
+        players: lobby.players,
+        allTranscripts: lobby.allTranscripts || []
+      });
+    }
+
     if (action === 'update-transcript') {
       globalTranscripts.set(lobbyId, transcript || '');
       return res.status(200).json({ success: true });
@@ -101,15 +140,35 @@ export default function handler(req, res) {
         timestamp: new Date().toISOString()
       });
       debateTranscripts.set(lobbyId, allTranscripts);
-      lobby.allTranscripts = allTranscripts;
+      
+      // Update allTranscripts array for quickfire clash
+      if (debateType === 'quickfire-clash') {
+        lobby.allTranscripts = allTranscripts.map(t => t.transcript);
+      }
+      
       globalLobbies.set(lobbyId, lobby);
-      return res.status(200).json({ success: true });
+      return res.status(200).json({
+        currentSpeakerIndex: lobby.currentSpeakerIndex,
+        speakingTimeLeft: lobby.speakingTimeLeft,
+        roundNumber: lobby.roundNumber,
+        debateFinished: lobby.debateFinished,
+        players: lobby.players,
+        allTranscripts: lobby.allTranscripts || []
+      });
     }
 
-    if (action === 'update-timer') {
-      lobby.speakingTimeLeft = timeLeft;
+    if (action === 'start-speaking') {
+      lobby.isActive = true;
+      lobby.speakingTimeLeft = debateType === 'quickfire-clash' ? 45 : 480;
       globalLobbies.set(lobbyId, lobby);
-      return res.status(200).json({ success: true });
+      return res.status(200).json({
+        currentSpeakerIndex: lobby.currentSpeakerIndex,
+        speakingTimeLeft: lobby.speakingTimeLeft,
+        roundNumber: lobby.roundNumber,
+        debateFinished: lobby.debateFinished,
+        players: lobby.players,
+        allTranscripts: lobby.allTranscripts || []
+      });
     }
 
     if (action === 'next-speaker') {
@@ -167,33 +226,12 @@ export default function handler(req, res) {
       lobby.speakingTimeLeft = debateType === 'quickfire-clash' ? 45 : 480;
       lobby.roundNumber = 1;
       lobby.debateFinished = false;
-      lobby.createdAt = new Date().toISOString();
-      globalTranscripts.delete(lobbyId);
-      debateTranscripts.delete(lobbyId);
+      lobby.allTranscripts = [];
+      globalLobbies.set(lobbyId, lobby);
     }
 
-    // Check if user already in lobby
-    if (!lobby.players.some(p => p.id === userId)) {
-      const newPlayer = {
-        id: userId,
-        name: userName,
-        joinedAt: new Date().toISOString(),
-        isHost: lobby.players.length === 0
-      };
-      lobby.players.push(newPlayer);
-    }
-
-    return res.status(200).json(lobby);
+    return res.status(400).json({ error: 'Invalid action' });
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
-}
-
-function getRequiredPlayers(debateType) {
-  switch (debateType) {
-    case 'world-schools': return 6;
-    case 'british-parliamentary': return 8;
-    case 'quickfire-clash': return 2;
-    default: return 2;
-  }
 }

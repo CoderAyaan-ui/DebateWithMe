@@ -96,52 +96,55 @@ export default function QuickfireClash() {
             setConnectedPlayers(data.players.length);
           }
           
-          // Update current player
-          if (data.currentSpeakerIndex !== undefined) {
-            setCurrentPlayer(data.currentSpeakerIndex + 1); // Convert 0-index to 1-index
-          }
-          
-          // Update round
-          if (data.roundNumber !== undefined) {
-            setRoundNumber(data.roundNumber);
-          }
-          
-          // Update timer
-          if (data.speakingTimeLeft !== undefined) {
-            setTimeLeft(data.speakingTimeLeft);
-          }
-          
-          // Update speeches
-          if (data.allTranscripts) {
-            if (data.allTranscripts[0] !== player1Speech) {
-              setPlayer1Speech(data.allTranscripts[0]);
+          // Only start game logic if we have enough players
+          if (data.players && data.players.length >= 2) {
+            // Update current player
+            if (data.currentSpeakerIndex !== undefined) {
+              setCurrentPlayer(data.currentSpeakerIndex + 1); // Convert 0-index to 1-index
             }
-            if (data.allTranscripts[1] !== player2Speech) {
-              setPlayer2Speech(data.allTranscripts[1]);
+            
+            // Update round
+            if (data.roundNumber !== undefined) {
+              setRoundNumber(data.roundNumber);
             }
-          }
-          
-          // Check if it's my turn
-          if (data.players && data.players.length > 0) {
-            const myPlayerIndex = data.players.findIndex((p: any) => p.id === playerId);
-            if (myPlayerIndex !== -1) {
-              setIsMyTurn(data.currentSpeakerIndex === myPlayerIndex);
+            
+            // Update timer
+            if (data.speakingTimeLeft !== undefined) {
+              setTimeLeft(data.speakingTimeLeft);
             }
-          }
-          
-          // Check if game is finished
-          if (data.debateFinished) {
-            setGameFinished(true);
-            if (data.allTranscripts && data.allTranscripts.length >= 2) {
-              const player1Score = data.allTranscripts[0].split(' ').length;
-              const player2Score = data.allTranscripts[1].split(' ').length;
-              
-              if (player1Score > player2Score) {
-                setWinner(`Player 1 wins! (${player1Score} words vs ${player2Score} words)`);
-              } else if (player2Score > player1Score) {
-                setWinner(`Player 2 wins! (${player2Score} words vs ${player1Score} words)`);
-              } else {
-                setWinner(`It's a tie! Both players spoke ${player1Score} words`);
+            
+            // Update speeches
+            if (data.allTranscripts) {
+              if (data.allTranscripts[0] !== player1Speech) {
+                setPlayer1Speech(data.allTranscripts[0]);
+              }
+              if (data.allTranscripts[1] !== player2Speech) {
+                setPlayer2Speech(data.allTranscripts[1]);
+              }
+            }
+            
+            // Check if it's my turn
+            if (data.players && data.players.length > 0) {
+              const myPlayerIndex = data.players.findIndex((p: any) => p.id === playerId);
+              if (myPlayerIndex !== -1) {
+                setIsMyTurn(data.currentSpeakerIndex === myPlayerIndex);
+              }
+            }
+            
+            // Check if game is finished
+            if (data.debateFinished) {
+              setGameFinished(true);
+              if (data.allTranscripts && data.allTranscripts.length >= 2) {
+                const player1Score = data.allTranscripts[0].split(' ').length;
+                const player2Score = data.allTranscripts[1].split(' ').length;
+                
+                if (player1Score > player2Score) {
+                  setWinner(`Player 1 wins! (${player1Score} words vs ${player2Score} words)`);
+                } else if (player2Score > player1Score) {
+                  setWinner(`Player 2 wins! (${player2Score} words vs ${player1Score} words)`);
+                } else {
+                  setWinner(`It's a tie! Both players spoke ${player1Score} words`);
+                }
               }
             }
           }
@@ -262,6 +265,18 @@ export default function QuickfireClash() {
           transcript: transcript
         })
       });
+      
+      // Move to next speaker
+      await fetch('/api/lobby', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          debateType: 'quickfire-clash',
+          userId: playerId,
+          userName: `Player ${playerId.substr(0, 4)}`,
+          action: 'next-speaker'
+        })
+      });
     } catch (error) {
       console.error('Submit speech error:', error);
     }
@@ -298,6 +313,31 @@ export default function QuickfireClash() {
             <p className="text-sm text-gray-600 mt-4">
               Anyone can join from anywhere! Both players click the same button.
             </p>
+          </div>
+        ) : connectedPlayers < 2 ? (
+          // Waiting for Players Screen
+          <div className="bg-orange-50 p-8 rounded-lg">
+            <h2 className="text-2xl font-bold text-orange-800 mb-4">Waiting for Players...</h2>
+            <div className="mb-6">
+              <div className="text-6xl mb-4">⏳</div>
+              <p className="text-gray-700 mb-2">
+                Players Connected: {connectedPlayers}/2
+              </p>
+              <p className="text-gray-600">
+                Share this link with a friend to start debating!
+              </p>
+            </div>
+            <div className="bg-white p-4 rounded-lg">
+              <p className="text-sm text-gray-600 mb-2">Current Players:</p>
+              {connectedPlayers === 1 && <p className="font-semibold">You</p>}
+              {connectedPlayers === 0 && <p className="text-gray-400">No players yet</p>}
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700 transition"
+            >
+              Leave Lobby
+            </button>
           </div>
         ) : gameFinished ? (
           // Game Finished Screen
