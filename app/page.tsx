@@ -1,63 +1,93 @@
+"use client";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import SignupForm from "./SignupForm";
+import LoginForm from "./LoginForm";
 import Image from "next/image";
 
 export default function Home() {
+  const [showLogin, setShowLogin] = useState(false);
+  const [signedUp, setSignedUp] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const router = useRouter();
+
+  // Check for existing login state on component mount
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    if (isLoggedIn) {
+      setLoggedIn(true);
+    }
+  }, []);
+
+  const handleLogin = () => {
+    setLoggedIn(true);
+    localStorage.setItem('isLoggedIn', 'true');
+  };
+
+  const handleLogout = () => {
+    setLoggedIn(false);
+    localStorage.removeItem('isLoggedIn');
+  };
+
+  if (loggedIn) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <main className="text-center px-4 w-full">
+          <Image src="/Pink White Black Simple Podcast Logo copy.png" alt="DebateWithMe Logo" width={260} height={260} className="mx-auto mb-6" />
+          <h1 className="text-5xl sm:text-6xl font-bold text-blue-600 mb-6">Welcome to DebateWithMe!</h1>
+          <div className="flex flex-col items-center gap-6 mt-8">
+            <button 
+              onClick={() => router.push('/multiplayer?type=world-schools')}
+              className="bg-blue-600 text-white text-lg font-semibold py-3 px-8 rounded shadow hover:bg-blue-700 transition"
+            >
+              World Schools style
+            </button>
+            <button 
+              onClick={() => router.push('/multiplayer?type=british-parliamentary')}
+              className="bg-purple-600 text-white text-lg font-semibold py-3 px-8 rounded shadow hover:bg-purple-700 transition"
+            >
+              British Parliamentary style
+            </button>
+            <button 
+              onClick={() => router.push('/multiplayer?type=quickfire-clash')}
+              className="bg-orange-600 text-white text-lg font-semibold py-3 px-8 rounded shadow hover:bg-orange-700 transition"
+            >
+              Quickfire Clash ⚡
+            </button>
+            <button 
+              onClick={handleLogout}
+              className="mt-4 text-red-600 underline hover:text-red-800 transition"
+            >
+              Logout
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+    <div className="flex min-h-screen items-center justify-center bg-white">
+      <main className="text-center px-4 w-full">
+        <h1 className="text-6xl font-bold text-blue-600 mb-4">DebateWithMe</h1>
+        <p className="text-xl text-gray-600 mb-8">
+          Debate anytime, anywhere, in any style.
+        </p>
+        {showLogin ? (
+          <LoginForm onLogin={handleLogin} />
+        ) : (
+          <SignupForm onSignup={() => { setSignedUp(true); setShowLogin(true); }} />
+        )}
+        <div className="mt-4">
+          {showLogin ? (
+            <button className="text-blue-600 underline" onClick={() => setShowLogin(false)}>
+              Don't have an account? Sign up
+            </button>
+          ) : (
+            <button className="text-blue-600 underline" onClick={() => setShowLogin(true)}>
+              Already have an account? Login
+            </button>
+          )}
         </div>
       </main>
     </div>
