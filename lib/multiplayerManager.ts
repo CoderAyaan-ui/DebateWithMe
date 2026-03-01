@@ -58,9 +58,12 @@ class MultiplayerManager {
   private cleanupOldLobbies() {
     const now = new Date();
     for (const [id, lobby] of this.lobbies) {
-      const createdDate = new Date(lobby.createdAt);
-      if (now.getTime() - createdDate.getTime() > 30 * 60 * 1000) {
-        this.lobbies.delete(id);
+      // Don't clean up global lobbies, only old random lobbies
+      if (!id.includes('-global')) {
+        const createdDate = new Date(lobby.createdAt);
+        if (now.getTime() - createdDate.getTime() > 30 * 60 * 1000) {
+          this.lobbies.delete(id);
+        }
       }
     }
     this.saveToStorage();
@@ -80,52 +83,77 @@ class MultiplayerManager {
   }
 
   createOrJoinLobby(debateType: 'world-schools' | 'british-parliamentary' | 'quickfire-clash', userId: string, userName: string): Lobby {
-    // Try to find an existing lobby with space
+    // Find or create the global lobby for this debate type
+    let lobby = this.findGlobalLobby(debateType);
+    
+    // Check if user is already in this lobby
+    if (lobby.players.some(p => p.id === userId)) {
+      this.currentLobbyId = lobby.id;
+      return lobby;
+    }
+
+    // If lobby is full or active, reset it for new game
+    if (lobby.players.length >= lobby.requiredPlayers || lobby.isActive) {
+      lobby = this.resetGlobalLobby(debateType);
+    }
+
+    // Add player to the global lobby
+    const newPlayer: Player = {
+      id: userId,
+      name: userName,
+      joinedAt: new Date().toISOString(),
+      isHost: lobby.players.length === 0 // First player is host
+    };
+    
+    lobby.players.push(newPlayer);
+    this.currentLobbyId = lobby.id;
+    this.saveToStorage();
+    
+    return lobby;
+  }
+
+  private findGlobalLobby(debateType: 'world-schools' | 'british-parliamentary' | 'quickfire-clash'): Lobby {
+    // Try to find existing global lobby for this debate type
     for (const [lobbyId, lobby] of this.lobbies) {
-      if (lobby.debateType === debateType && 
-          lobby.players.length < lobby.requiredPlayers && 
-          !lobby.isActive &&
-          !lobby.players.some(p => p.id === userId)) {
-        
-        // Join existing lobby
-        const newPlayer: Player = {
-          id: userId,
-          name: userName,
-          joinedAt: new Date().toISOString(),
-          isHost: false
-        };
-        
-        lobby.players.push(newPlayer);
-        this.currentLobbyId = lobbyId;
-        this.saveToStorage();
-        
+      if (lobby.debateType === debateType) {
         return lobby;
       }
     }
 
-    // Create new lobby
-    const lobbyId = this.generateLobbyId();
-    const hostPlayer: Player = {
-      id: userId,
-      name: userName,
-      joinedAt: new Date().toISOString(),
-      isHost: true
-    };
+    // Create new global lobby if none exists
+    return this.createGlobalLobby(debateType);
+  }
 
+  private createGlobalLobby(debateType: 'world-schools' | 'british-parliamentary' | 'quickfire-clash'): Lobby {
+    const lobbyId = `${debateType}-global`;
+    
     const newLobby: Lobby = {
       id: lobbyId,
       debateType,
-      players: [hostPlayer],
+      players: [],
       requiredPlayers: this.getRequiredPlayers(debateType),
       createdAt: new Date().toISOString(),
       isActive: false
     };
 
     this.lobbies.set(lobbyId, newLobby);
-    this.currentLobbyId = lobbyId;
-    this.saveToStorage();
-
     return newLobby;
+  }
+
+  private resetGlobalLobby(debateType: 'world-schools' | 'british-parliamentary' | 'quickfire-clash'): Lobby {
+    const lobbyId = `${debateType}-global`;
+    
+    const resetLobby: Lobby = {
+      id: lobbyId,
+      debateType,
+      players: [],
+      requiredPlayers: this.getRequiredPlayers(debateType),
+      createdAt: new Date().toISOString(),
+      isActive: false
+    };
+
+    this.lobbies.set(lobbyId, resetLobby);
+    return resetLobby;
   }
 
   getCurrentLobby(): Lobby | null {

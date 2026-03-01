@@ -81,6 +81,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-white">
       <main className="text-center px-4 w-full">
+        <Image src="/Pink White Black Simple Podcast Logo copy.png" alt="DebateWithMe Logo" width={260} height={260} className="mx-auto mb-6" />
         <h1 className="text-6xl font-bold text-blue-600 mb-4">DebateWithMe</h1>
         <p className="text-xl text-gray-600 mb-8">
           Debate anytime, anywhere, in any style.
