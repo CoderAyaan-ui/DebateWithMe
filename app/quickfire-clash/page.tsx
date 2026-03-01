@@ -7,21 +7,22 @@ export default function QuickfireClash() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // Basic states
+  // Basic game states
   const [selectedMotion, setSelectedMotion] = useState("");
+  const [gameStarted, setGameStarted] = useState(false);
+  const [currentPlayer, setCurrentPlayer] = useState(1);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [timeLeft, setTimeLeft] = useState(45);
   const [transcript, setTranscript] = useState("");
   const [isListening, setIsListening] = useState(false);
-  const [debateFinished, setDebateFinished] = useState(false);
-  const [winner, setWinner] = useState("");
-  const [currentUserId] = useState(() => Math.random().toString(36).substr(2, 9));
-  const [lobbyId] = useState(() => searchParams?.get('lobbyId') || '');
-  const [currentSpeakerIndex, setCurrentSpeakerIndex] = useState(0);
   const [roundNumber, setRoundNumber] = useState(1);
-  const [otherPlayerTranscript, setOtherPlayerTranscript] = useState("");
-  const [isMyTurn, setIsMyTurn] = useState(false);
-  const [players, setPlayers] = useState<any[]>([]);
+  const [player1Speech, setPlayer1Speech] = useState("");
+  const [player2Speech, setPlayer2Speech] = useState("");
+  const [gameFinished, setGameFinished] = useState(false);
+  const [winner, setWinner] = useState("");
+  
+  // Speech recognition instance
+  const [recognition, setRecognition] = useState<any>(null);
 
   // Generate random motion
   useEffect(() => {
@@ -41,7 +42,47 @@ export default function QuickfireClash() {
     setSelectedMotion(randomMotion);
   }, []);
 
-  // Simple timer effect
+  // Initialize speech recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognitionInstance = new SpeechRecognition();
+        recognitionInstance.continuous = true;
+        recognitionInstance.interimResults = true;
+        recognitionInstance.lang = 'en-US';
+        
+        recognitionInstance.onresult = (event: any) => {
+          let finalTranscript = '';
+          let interimTranscript = '';
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const result = event.results[i];
+            if (result.isFinal) {
+              finalTranscript += result[0].transcript + ' ';
+            } else {
+              interimTranscript += result[0].transcript;
+            }
+          }
+          
+          setTranscript((prev) => prev + finalTranscript);
+        };
+        
+        recognitionInstance.onerror = (event: any) => {
+          console.error('Speech error:', event.error);
+          setIsListening(false);
+        };
+        
+        recognitionInstance.onend = () => {
+          setIsListening(false);
+        };
+        
+        setRecognition(recognitionInstance);
+      }
+    }
+  }, []);
+
+  // Timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isSpeaking && timeLeft > 0) {
@@ -58,131 +99,82 @@ export default function QuickfireClash() {
     return () => clearInterval(interval);
   }, [isSpeaking, timeLeft]);
 
-  // Poll for multiplayer updates
-  useEffect(() => {
-    if (lobbyId) {
-      const pollInterval = setInterval(async () => {
-        try {
-          const response = await fetch(`/api/lobby?debateType=quickfire-clash&getTranscript=true`);
-          const data = await response.json();
-          
-          if (data.transcript && data.transcript !== transcript) {
-            setOtherPlayerTranscript(data.transcript);
-          }
-          
-          if (data.currentSpeakerIndex !== undefined) {
-            setCurrentSpeakerIndex(data.currentSpeakerIndex);
-            const myPlayerIndex = data.players?.findIndex((p: any) => p.id === currentUserId);
-            setIsMyTurn(myPlayerIndex === data.currentSpeakerIndex);
-          }
-          
-          if (data.roundNumber) setRoundNumber(data.roundNumber);
-          if (data.speakingTimeLeft) setTimeLeft(data.speakingTimeLeft);
-          if (data.players) setPlayers(data.players);
-        } catch (error) {
-          console.error('Polling error:', error);
-        }
-      }, 2000);
+  const startGame = () => {
+    setGameStarted(true);
+    setCurrentPlayer(1);
+    setRoundNumber(1);
+    setTimeLeft(45);
+  };
 
-      return () => clearInterval(pollInterval);
-    }
-  }, [lobbyId, currentUserId, transcript]);
-
-  // Simple speech recognition
   const startSpeaking = () => {
-    if (!isMyTurn) return;
+    if (!recognition) {
+      alert('Speech recognition not supported in your browser. Please use Chrome or Edge.');
+      return;
+    }
     
     setIsSpeaking(true);
     setIsListening(true);
     setTimeLeft(45);
     setTranscript("");
     
-    // Simple Web Speech API
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-      
-      recognition.onresult = (event: any) => {
-        let finalTranscript = '';
-        let interimTranscript = '';
-        
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          if (result.isFinal) {
-            finalTranscript += result[0].transcript + ' ';
-          } else {
-            interimTranscript += result[0].transcript;
-          }
-        }
-        
-        setTranscript((prev) => prev + finalTranscript);
-        
-        // Update server with transcript
-        fetch('/api/lobby', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            debateType: 'quickfire-clash',
-            userId: currentUserId,
-            userName: 'Player',
-            action: 'update-transcript',
-            transcript: transcript + finalTranscript
-          })
-        });
-      };
-      
-      recognition.onerror = (event: any) => {
-        console.error('Speech error:', event.error);
-        setIsListening(false);
-      };
-      
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-      
-      recognition.start();
-    } else {
-      // Fallback to manual input
-      alert('Speech recognition not supported. Please type your argument.');
-    }
+    recognition.start();
   };
 
   const handleFinishSpeaking = () => {
     setIsSpeaking(false);
     setIsListening(false);
     
-    // Move to next speaker or finish
-    if (roundNumber < 5) {
-      fetch('/api/lobby', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          debateType: 'quickfire-clash',
-          userId: currentUserId,
-          userName: 'Player',
-          action: 'next-speaker'
-        })
-      });
+    if (recognition) {
+      recognition.stop();
+    }
+    
+    // Save the speech
+    if (currentPlayer === 1) {
+      setPlayer1Speech(transcript);
     } else {
-      determineWinner();
+      setPlayer2Speech(transcript);
+    }
+    
+    // Check if game is finished
+    if (roundNumber >= 5) {
+      finishGame();
+    } else {
+      // Move to next round
+      setRoundNumber(prev => prev + 1);
+      setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
+      setTimeLeft(45);
+      setTranscript("");
     }
   };
 
-  const determineWinner = () => {
-    setDebateFinished(true);
-    const myScore = transcript.length + (transcript.split(' ').length * 2);
-    const opponentScore = otherPlayerTranscript.length + (otherPlayerTranscript.split(' ').length * 2);
+  const finishGame = () => {
+    setGameFinished(true);
     
-    const winnerName = myScore > opponentScore ? 'You' : 'Opponent';
-    const reason = myScore > opponentScore 
-      ? `More comprehensive argument (${myScore} vs ${opponentScore} points)`
-      : `More detailed argument (${opponentScore} vs ${myScore} points)`;
+    // Simple scoring based on word count
+    const player1Score = player1Speech.split(' ').length;
+    const player2Score = player2Speech.split(' ').length;
     
-    setWinner(`${winnerName} won! ${reason}`);
+    if (player1Score > player2Score) {
+      setWinner(`Player 1 wins! (${player1Score} words vs ${player2Score} words)`);
+    } else if (player2Score > player1Score) {
+      setWinner(`Player 2 wins! (${player2Score} words vs ${player1Score} words)`);
+    } else {
+      setWinner(`It's a tie! Both players spoke ${player1Score} words`);
+    }
+  };
+
+  const resetGame = () => {
+    setGameStarted(false);
+    setCurrentPlayer(1);
+    setIsSpeaking(false);
+    setTimeLeft(45);
+    setTranscript("");
+    setIsListening(false);
+    setRoundNumber(1);
+    setPlayer1Speech("");
+    setPlayer2Speech("");
+    setGameFinished(false);
+    setWinner("");
   };
 
   return (
@@ -197,76 +189,92 @@ export default function QuickfireClash() {
           <p className="text-lg">{selectedMotion}</p>
         </div>
 
-        {/* Game Status */}
-        {debateFinished ? (
-          <div className="bg-yellow-50 border-2 border-yellow-200 p-6 rounded-lg mb-6">
-            <h2 className="text-2xl font-bold text-yellow-800 mb-4">Debate Finished!</h2>
-            <p className="text-lg text-yellow-700">{winner}</p>
-            <div className="mt-4 space-y-2">
-              <div className="text-left bg-white p-3 rounded">
-                <strong>Your arguments:</strong> {transcript}
+        {!gameStarted ? (
+          // Start Game Screen
+          <div className="bg-blue-50 p-8 rounded-lg">
+            <h2 className="text-2xl font-bold text-blue-800 mb-4">Ready to Debate?</h2>
+            <p className="text-gray-700 mb-6">
+              Two players will debate the motion in 5 rounds of 45 seconds each.
+              Take turns speaking and make your arguments count!
+            </p>
+            <button
+              onClick={startGame}
+              className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition text-lg font-semibold"
+            >
+              Start Debate
+            </button>
+          </div>
+        ) : gameFinished ? (
+          // Game Finished Screen
+          <div className="bg-yellow-50 border-2 border-yellow-200 p-8 rounded-lg">
+            <h2 className="text-3xl font-bold text-yellow-800 mb-4">Debate Finished!</h2>
+            <p className="text-xl text-yellow-700 mb-6">{winner}</p>
+            
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-white p-4 rounded-lg">
+                <h3 className="font-semibold mb-2">Player 1 Arguments:</h3>
+                <p className="text-left">{player1Speech || "No speech recorded"}</p>
               </div>
-              <div className="text-left bg-white p-3 rounded">
-                <strong>Opponent's arguments:</strong> {otherPlayerTranscript}
+              <div className="bg-white p-4 rounded-lg">
+                <h3 className="font-semibold mb-2">Player 2 Arguments:</h3>
+                <p className="text-left">{player2Speech || "No speech recorded"}</p>
               </div>
             </div>
+            
+            <button
+              onClick={resetGame}
+              className="bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 transition text-lg font-semibold"
+            >
+              Play Again
+            </button>
           </div>
         ) : (
+          // Game Playing Screen
           <>
-            {/* Players and Turn Info */}
+            {/* Game Status */}
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2">Players:</h3>
-                {players.map((player: any, index: number) => (
-                  <div key={player.id} className={`p-2 rounded ${index === currentSpeakerIndex ? 'bg-blue-200' : ''}`}>
-                    {player.name} {index === currentSpeakerIndex && '(Speaking)'}
-                  </div>
-                ))}
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg">
                 <h3 className="font-semibold mb-2">Round {roundNumber}/5</h3>
                 <p className="text-2xl font-bold">{timeLeft}s</p>
-                {isMyTurn ? (
-                  <p className="text-green-600 font-semibold">Your Turn!</p>
-                ) : (
-                  <p className="text-gray-600">Opponent's turn...</p>
-                )}
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h3 className="font-semibold mb-2">Current Speaker</h3>
+                <p className="text-xl font-bold text-green-600">Player {currentPlayer}</p>
               </div>
               <div className="bg-purple-50 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2">Live Status</h3>
-                <p className="text-sm">Connected: {players.length}/2</p>
-                <p className="text-sm">Speaker: {currentSpeakerIndex === 0 ? 'Player 1' : 'Player 2'}</p>
+                <h3 className="font-semibold mb-2">Status</h3>
+                <p className="text-sm">{isListening ? '🎤 Recording...' : 'Ready to speak'}</p>
               </div>
             </div>
 
-            {/* Live Transcripts */}
+            {/* Speech Display */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2">Your Speech:</h3>
+                <h3 className="font-semibold mb-2">Player 1 Speech:</h3>
                 <div className="text-left bg-white p-3 rounded min-h-[150px] max-h-[200px] overflow-y-auto">
-                  {transcript || "Start speaking when it's your turn..."}
-                  {isListening && <span className="text-red-500"> 🎤 Listening...</span>}
+                  {currentPlayer === 1 ? transcript : player1Speech}
+                  {currentPlayer === 1 && isListening && <span className="text-red-500"> 🎤</span>}
                 </div>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2">Opponent's Speech:</h3>
+                <h3 className="font-semibold mb-2">Player 2 Speech:</h3>
                 <div className="text-left bg-white p-3 rounded min-h-[150px] max-h-[200px] overflow-y-auto">
-                  {otherPlayerTranscript || "Waiting for opponent to speak..."}
+                  {currentPlayer === 2 ? transcript : player2Speech}
+                  {currentPlayer === 2 && isListening && <span className="text-red-500"> 🎤</span>}
                 </div>
               </div>
             </div>
 
-            {/* Simple Controls */}
+            {/* Controls */}
             <div className="flex gap-4 justify-center">
-              {isMyTurn && !isSpeaking && (
+              {!isSpeaking ? (
                 <button
                   onClick={startSpeaking}
                   className="bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 transition text-lg font-semibold"
                 >
                   🎤 Start Speaking (45s)
                 </button>
-              )}
-              {isMyTurn && isSpeaking && (
+              ) : (
                 <button
                   onClick={handleFinishSpeaking}
                   className="bg-red-600 text-white px-8 py-4 rounded-lg hover:bg-red-700 transition text-lg font-semibold"
