@@ -1,10 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import MultiplayerManager, { Player, Lobby } from "../../lib/multiplayerManager";
 
-export default function MultiplayerMatching() {
+function MultiplayerContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [debateType, setDebateType] = useState<'world-schools' | 'british-parliamentary' | 'quickfire-clash' | null>(null);
@@ -279,5 +279,20 @@ export default function MultiplayerMatching() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MultiplayerMatching() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Setting up multiplayer...</p>
+        </div>
+      </div>
+    }>
+      <MultiplayerContent />
+    </Suspense>
   );
 }
