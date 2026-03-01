@@ -302,12 +302,6 @@ function SpeechDeliveryContent() {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <button
-            onClick={handleBackToHome}
-            className="mb-4 text-blue-600 hover:text-blue-800 underline"
-          >
-            ← Back to Home
-          </button>
           <h1 className="text-4xl font-bold text-center text-blue-600 mb-2">
             Speech Delivery
           </h1>
@@ -398,32 +392,44 @@ function SpeechDeliveryContent() {
           </div>
         </div>
 
-        {/* Microphone Button */}
+        {/* Microphone Button - Only show when it's your turn */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">
-            Deliver Your Speech
+            {isMyTurn ? "Your Turn to Speak" : "Waiting for Your Turn"}
           </h2>
-          <MicrophoneButton
-            isListening={isListening}
-            isSupported={speechService.supported}
-            onStart={handleStartListening}
-            onStop={handleStopListening}
-          />
-          {error && (
-            <div className="mt-4 text-center text-red-600">
-              {error}
-            </div>
-          )}
           
-          {/* Finish Speech Button for Multiplayer */}
-          {lobbyId && isMyTurn && (
-            <div className="mt-4 text-center">
-              <button
-                onClick={handleFinishSpeech}
-                className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition"
-              >
-                Finish Speech & Next Speaker
-              </button>
+          {isMyTurn ? (
+            <>
+              <MicrophoneButton
+                isListening={isListening}
+                isSupported={speechService.supported}
+                onStart={handleStartListening}
+                onStop={handleStopListening}
+              />
+              {error && (
+                <div className="mt-4 text-center text-red-600">
+                  {error}
+                </div>
+              )}
+              
+              {/* Finish Speech Button for Multiplayer */}
+              {lobbyId && (
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={handleFinishSpeech}
+                    className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition"
+                  >
+                    Finish Speech & Next Speaker
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-gray-600">
+                <p className="text-lg mb-2">⏳ Waiting for current speaker to finish...</p>
+                <p className="text-sm">You'll see the microphone button when it's your turn</p>
+              </div>
             </div>
           )}
         </div>
