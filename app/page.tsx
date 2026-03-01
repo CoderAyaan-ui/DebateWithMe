@@ -14,41 +14,41 @@ export default function Home() {
         <div className="flex flex-col items-center gap-6 mt-8">
           <button 
             onClick={() => router.push('/multiplayer?type=world-schools')}
-            className="bg-blue-600 text-white text-lg font-semibold py-3 px-8 rounded shadow hover:bg-blue-700 transition"
+            className="bg-blue-600 text-blue-100 text-lg font-semibold py-3 px-8 rounded shadow hover:bg-blue-700 transition"
           >
             World Schools style
           </button>
           <button 
             onClick={() => router.push('/multiplayer?type=british-parliamentary')}
-            className="bg-purple-600 text-white text-lg font-semibold py-3 px-8 rounded shadow hover:bg-purple-700 transition"
+            className="bg-purple-600 text-blue-100 text-lg font-semibold py-3 px-8 rounded shadow hover:bg-purple-700 transition"
           >
             British Parliamentary style
           </button>
           <button 
             onClick={() => router.push('/multiplayer?type=quickfire-clash')}
-            className="bg-green-600 text-white text-lg font-semibold py-3 px-8 rounded shadow hover:bg-green-700 transition"
+            className="bg-green-600 text-blue-100 text-lg font-semibold py-3 px-8 rounded shadow hover:bg-green-700 transition"
           >
             Quickfire Clash
           </button>
           <button 
             onClick={() => router.push('/world-schools')}
-            className="bg-gray-600 text-white text-lg font-semibold py-3 px-8 rounded shadow hover:bg-gray-700 transition"
+            className="bg-indigo-600 text-blue-100 text-lg font-semibold py-3 px-8 rounded shadow hover:bg-indigo-700 transition"
           >
             Practice World Schools
           </button>
           <button 
             onClick={() => router.push('/british-parliamentary')}
-            className="bg-gray-600 text-white text-lg font-semibold py-3 px-8 rounded shadow hover:bg-gray-700 transition"
+            className="bg-pink-600 text-blue-100 text-lg font-semibold py-3 px-8 rounded shadow hover:bg-pink-700 transition"
           >
             Practice British Parliamentary
           </button>
-          <button 
-            onClick={() => router.push('/quickfire-clash')}
-            className="bg-gray-600 text-white text-lg font-semibold py-3 px-8 rounded shadow hover:bg-gray-700 transition"
-          >
-            Practice Quickfire Clash
-          </button>
         </div>
+        <button 
+          onClick={() => router.push('/quickfire-clash')}
+          className="bg-gray-600 text-blue-100 text-lg font-semibold py-3 px-8 rounded shadow hover:bg-gray-700 transition"
+        >
+          Practice Quickfire Clash
+        </button>
       </main>
     </div>
   );

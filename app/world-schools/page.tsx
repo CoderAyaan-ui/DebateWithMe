@@ -136,8 +136,8 @@ export default function WorldSchoolsDebate() {
               onClick={isListening ? handleStopListening : handleStartListening}
               className={`px-6 py-3 rounded-lg font-semibold transition ${
                 isListening 
-                  ? 'bg-red-600 hover:bg-red-700 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
+                  ? 'bg-red-600 hover:bg-red-700 text-blue-100' 
+                  : 'bg-green-600 hover:bg-green-700 text-blue-100'
               }`}
             >
               {isListening ? '⏹️ Stop Recording' : '🎤 Start Recording'}
@@ -163,13 +163,13 @@ export default function WorldSchoolsDebate() {
           <button
             onClick={handleSubmitSpeech}
             disabled={!transcript.trim()}
-            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-semibold"
+            className="px-8 py-3 bg-blue-600 text-blue-100 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-semibold"
           >
             Submit Speech
           </button>
           <button
             onClick={handleBackToHome}
-            className="px-8 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition font-semibold"
+            className="px-8 py-3 bg-gray-600 text-blue-100 rounded-lg hover:bg-gray-700 transition font-semibold"
           >
             Back to Home
           </button>

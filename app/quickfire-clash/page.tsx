@@ -305,7 +305,7 @@ export default function QuickfireClash() {
             <div className="flex gap-4 justify-center">
               <button
                 onClick={startGame}
-                className="bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 transition text-lg font-semibold"
+                className="bg-green-600 text-blue-100 px-8 py-4 rounded-lg hover:bg-green-700 transition text-lg font-semibold"
               >
                 Join Online Game
               </button>
@@ -334,7 +334,7 @@ export default function QuickfireClash() {
             </div>
             <button
               onClick={() => window.location.reload()}
-              className="mt-4 bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700 transition"
+              className="mt-4 bg-gray-600 text-blue-100 px-6 py-2 rounded hover:bg-gray-700 transition"
             >
               Leave Lobby
             </button>
@@ -358,7 +358,7 @@ export default function QuickfireClash() {
             
             <button
               onClick={() => window.location.reload()}
-              className="bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 transition text-lg font-semibold"
+              className="bg-green-600 text-blue-100 px-8 py-4 rounded-lg hover:bg-green-700 transition text-lg font-semibold"
             >
               Play Again
             </button>
@@ -411,7 +411,7 @@ export default function QuickfireClash() {
               {isMyTurn && !isSpeaking && (
                 <button
                   onClick={startSpeaking}
-                  className="bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 transition text-lg font-semibold"
+                  className="bg-green-600 text-blue-100 px-8 py-4 rounded-lg hover:bg-green-700 transition text-lg font-semibold"
                 >
                   🎤 Start Speaking (45s)
                 </button>
@@ -419,7 +419,7 @@ export default function QuickfireClash() {
               {isMyTurn && isSpeaking && (
                 <button
                   onClick={handleFinishSpeaking}
-                  className="bg-red-600 text-white px-8 py-4 rounded-lg hover:bg-red-700 transition text-lg font-semibold"
+                  className="bg-red-600 text-blue-100 px-8 py-4 rounded-lg hover:bg-red-700 transition text-lg font-semibold"
                 >
                   ⏹️ Finish Speaking
                 </button>
