@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 
 export default function SignupForm({ onSignup }: { onSignup: () => void }) {
   const [username, setUsername] = useState("");
@@ -13,26 +14,25 @@ export default function SignupForm({ onSignup }: { onSignup: () => void }) {
     setLoading(true);
     setError("");
     
-    const { supabase } = await import("../lib/supabaseClient");
-    if (!supabase) {
-      setError("Authentication service not available");
+    try {
+      // Sign up user
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { username },
+        },
+      });
+      
+      if (signUpError) {
+        setError(signUpError.message);
+      } else {
+        onSignup();
+      }
+    } catch (err: any) {
+      setError("Signup failed - please try again");
+    } finally {
       setLoading(false);
-      return;
-    }
-    
-    // Sign up user
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { username },
-      },
-    });
-    setLoading(false);
-    if (signUpError) {
-      setError(signUpError.message);
-    } else {
-      onSignup();
     }
   };
 

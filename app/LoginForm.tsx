@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 
 export default function LoginForm({ onLogin }: { onLogin: () => void }) {
   const [email, setEmail] = useState("");
@@ -13,44 +14,26 @@ export default function LoginForm({ onLogin }: { onLogin: () => void }) {
     setError("");
     
     try {
-      const { supabase } = await import("../lib/supabaseClient");
-      if (!supabase) {
-        setError("Authentication service not available");
-        return;
-      }
-      
       console.log("Attempting login with:", email);
       
-      // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Login timeout - please try again")), 10000);
-      });
-      
-      const loginPromise = supabase.auth.signInWithPassword({
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      const { data, error: loginError } = await Promise.race([loginPromise, timeoutPromise]) as any;
-      
       console.log("Login result:", { data, loginError });
       
       if (loginError) {
-        console.error("Login error:", loginError);
         setError(loginError.message);
       } else if (data.user) {
-        console.log("Login successful for user:", data.user.email);
+        console.log("Login successful");
         onLogin();
       } else {
-        setError("Login failed - no user data returned");
+        setError("Login failed - please try again");
       }
     } catch (err: any) {
-      console.error("Unexpected login error:", err);
-      if (err.message === "Login timeout - please try again") {
-        setError("Login timed out - please check your connection and try again");
-      } else {
-        setError("An unexpected error occurred during login");
-      }
+      console.error("Login error:", err);
+      setError("Login failed - please check your credentials");
     } finally {
       setLoading(false);
     }
