@@ -22,6 +22,18 @@ function SpeechDeliveryContent() {
   const [error, setError] = useState('');
   const [showPrepareMessage, setShowPrepareMessage] = useState(false);
   const [speechService] = useState(() => new SpeechToTextService());
+  
+  // Multiplayer states
+  const [currentSpeakerIndex, setCurrentSpeakerIndex] = useState(0);
+  const [liveTranscript, setLiveTranscript] = useState('');
+  const [currentSpeakerName, setCurrentSpeakerName] = useState('');
+  const [debateType, setDebateType] = useState<'world-schools' | 'british-parliamentary'>('world-schools');
+  const [currentUserId] = useState(() => Math.random().toString(36).substr(2, 9));
+  const [lobbyId] = useState(() => searchParams?.get('lobbyId') || '');
+  const [isMyTurn, setIsMyTurn] = useState(false);
+  const [winner, setWinner] = useState('');
+  const [debateFinished, setDebateFinished] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(480); // 8 minutes for formal debates
 
   useEffect(() => {
     // Parse speech data from URL parameters
@@ -59,7 +71,178 @@ function SpeechDeliveryContent() {
       clearTimeout(timer);
       clearTimeout(prepareTimer);
     };
-  }, [searchParams, router]);
+  }, [searchParams]);
+
+  // Set debate type and start multiplayer polling
+  useEffect(() => {
+    const type = (searchParams?.get('debateType') as 'world-schools' | 'british-parliamentary') || 'world-schools';
+    setDebateType(type);
+  }, [searchParams]);
+
+  // Multiplayer polling for live transcript and speaker management
+  useEffect(() => {
+    if (lobbyId && debateType) {
+      const pollInterval = setInterval(async () => {
+        try {
+          const response = await fetch(`/api/lobby?debateType=${debateType}&getTranscript=true`);
+          const data = await response.json();
+          
+          // Update live transcript
+          if (data.transcript) {
+            setLiveTranscript(data.transcript);
+          }
+          
+          // Update current speaker info
+          if (data.currentSpeakerIndex !== undefined) {
+            setCurrentSpeakerIndex(data.currentSpeakerIndex);
+            const speakers = debateType === 'world-schools' 
+              ? ['1st Proposition', '1st Opposition', '2nd Proposition', '2nd Opposition', '3rd Proposition', '3rd Opposition']
+              : ['Prime Minister', 'Leader of Opposition', 'Deputy Prime Minister', 'Deputy Leader of Opposition', 'Government Whip', 'Opposition Whip', 'Government Member', 'Opposition Member'];
+            
+            setCurrentSpeakerName(speakers[data.currentSpeakerIndex] || 'Unknown Speaker');
+            
+            // Check if it's my turn based on role
+            const myRole = searchParams?.get('role') || '';
+            setIsMyTurn(speakers[data.currentSpeakerIndex] === myRole);
+          }
+          
+          // Update timer
+          if (data.speakingTimeLeft !== undefined) {
+            setTimeLeft(data.speakingTimeLeft);
+          }
+          
+          // Check if debate is finished
+          if (data.debateFinished) {
+            setDebateFinished(true);
+            // AI judging based on all transcripts
+            if (data.allTranscripts && data.allTranscripts.length > 0) {
+              determineWinner(data.allTranscripts);
+            }
+          }
+        } catch (error) {
+          console.error('Polling error:', error);
+        }
+      }, 1000);
+
+      return () => clearInterval(pollInterval);
+    }
+  }, [lobbyId, debateType, searchParams]);
+
+  // Update transcript when speaking and sync with server
+  useEffect(() => {
+    if (isMyTurn && isListening && transcript && lobbyId) {
+      fetch('/api/lobby', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          debateType,
+          userId: currentUserId,
+          userName: currentSpeakerName,
+          action: 'update-transcript',
+          transcript
+        })
+      });
+    }
+  }, [transcript, isMyTurn, isListening, currentUserId, currentSpeakerName, debateType, lobbyId]);
+
+  // Timer countdown for current speaker
+  useEffect(() => {
+    if (timeLeft > 0 && !debateFinished) {
+      const timer = setTimeout(() => {
+        setTimeLeft(prev => prev - 1);
+        // Update server timer
+        fetch('/api/lobby', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            debateType,
+            userId: currentUserId,
+            userName: 'Timer',
+            action: 'update-timer',
+            timeLeft: timeLeft - 1
+          })
+        });
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (timeLeft === 0 && isMyTurn) {
+      // Auto-finish when time is up
+      handleFinishSpeech();
+    }
+  }, [timeLeft, debateFinished, isMyTurn, currentUserId, debateType]);
+
+  const determineWinner = (allTranscripts: any[]) => {
+    // AI judging based on content quality, arguments, and evidence
+    let propositionScore = 0;
+    let oppositionScore = 0;
+    
+    allTranscripts.forEach((speech) => {
+      const content = speech.transcript.toLowerCase();
+      const wordCount = speech.transcript.split(' ').length;
+      let score = wordCount;
+      
+      // Bonus for logical connectors
+      if (content.includes('because') || content.includes('therefore') || content.includes('however')) {
+        score += 50;
+      }
+      
+      // Bonus for evidence
+      if (content.includes('according to') || content.includes('research shows') || content.includes('statistics')) {
+        score += 100;
+      }
+      
+      // Bonus for rebuttals
+      if (content.includes('my opponent') || content.includes('they claim') || content.includes('contrary to')) {
+        score += 75;
+      }
+      
+      // Assign to team based on role
+      if (speech.role.includes('Proposition') || speech.role.includes('Prime') || speech.role.includes('Deputy Prime') || speech.role.includes('Government')) {
+        propositionScore += score;
+      } else {
+        oppositionScore += score;
+      }
+    });
+    
+    const winnerName = propositionScore > oppositionScore ? 'Proposition' : 'Opposition';
+    const reason = `Proposition: ${propositionScore} points vs Opposition: ${oppositionScore} points`;
+    
+    setWinner(`${winnerName} wins! ${reason}`);
+  };
+
+  const handleFinishSpeech = () => {
+    if (transcript.trim()) {
+      // Submit speech to server for judging
+      fetch('/api/lobby', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          debateType,
+          userId: currentUserId,
+          userName: currentSpeakerName,
+          action: 'submit-speech',
+          transcript: transcript.trim(),
+          speechRole: searchParams?.get('role') || 'Speaker'
+        })
+      });
+    }
+    
+    // Move to next speaker
+    fetch('/api/lobby', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        debateType,
+        userId: currentUserId,
+        userName: 'System',
+        action: 'next-speaker'
+      })
+    });
+    
+    // Stop listening
+    if (isListening) {
+      handleStopListening();
+    }
+  };
 
   const handleStartListening = () => {
     if (!speechService.supported) {
@@ -98,30 +281,6 @@ function SpeechDeliveryContent() {
     speechService.stopListening();
     setIsListening(false);
     setInterimTranscript('');
-  };
-
-  const handleFinishSpeech = () => {
-    // Stop listening if active
-    if (isListening) {
-      handleStopListening();
-    }
-    
-    // Check if speechData is available
-    if (!speechData) {
-      console.error('Speech data not available');
-      return;
-    }
-    
-    // Navigate to feedback page with all speech data
-    const params = new URLSearchParams({
-      motion: speechData.motion,
-      role: speechData.role,
-      speechText: speechData.speechText,
-      debateType: speechData.debateType,
-      transcript: transcript
-    });
-    
-    router.push(`/feedback?${params.toString()}`);
   };
 
   const handleBackToHome = () => {
@@ -192,6 +351,41 @@ function SpeechDeliveryContent() {
           </div>
         )}
 
+        {/* Multiplayer Live Transcript */}
+        {lobbyId && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Live Debate</h2>
+            {debateFinished ? (
+              <div className="bg-yellow-50 border-2 border-yellow-200 p-4 rounded">
+                <h3 className="text-lg font-bold text-yellow-800 mb-2">Debate Finished!</h3>
+                <p className="text-yellow-700">{winner}</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Current Speaker: <span className="font-semibold">{currentSpeakerName}</span></p>
+                    <p className="text-sm text-gray-600">Time Remaining: <span className="font-semibold">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span></p>
+                  </div>
+                  <div className="text-right">
+                    {isMyTurn ? (
+                      <span className="text-green-600 font-semibold">Your Turn!</span>
+                    ) : (
+                      <span className="text-gray-600">Waiting...</span>
+                    )}
+                  </div>
+                </div>
+                <div className="bg-gray-50 p-4 rounded min-h-[150px] max-h-[200px] overflow-y-auto">
+                  <h3 className="font-semibold mb-2">Live Transcript:</h3>
+                  <p className="text-gray-800 whitespace-pre-wrap">
+                    {liveTranscript || "Waiting for speaker to begin..."}
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Speech Notepad */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">
@@ -218,6 +412,18 @@ function SpeechDeliveryContent() {
           {error && (
             <div className="mt-4 text-center text-red-600">
               {error}
+            </div>
+          )}
+          
+          {/* Finish Speech Button for Multiplayer */}
+          {lobbyId && isMyTurn && (
+            <div className="mt-4 text-center">
+              <button
+                onClick={handleFinishSpeech}
+                className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition"
+              >
+                Finish Speech & Next Speaker
+              </button>
             </div>
           )}
         </div>
