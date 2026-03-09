@@ -87,92 +87,106 @@ What specific aspect of your performance or debate techniques would you like me 
     const motionKey = Object.keys(motionKnowledge).find(key => motion.toLowerCase().includes(key.toLowerCase()));
     const motionInfo = motionKey ? motionKnowledge[motionKey] : null;
     
-    // Enhanced framework responses with motion-specific context
-    if (lowerMessage.includes('framework') || lowerMessage.includes('criteria')) {
-      if (role.includes('1st Speaker')) {
-        if (motionInfo) {
-          return `As 1st Speaker for "${motion}", your framework is crucial for setting the debate terms. Here's a powerful framework approach:
+    // Dynamic response generation based on user intent
+    const generateDynamicResponse = () => {
+      // Check if user is asking for specific help
+      if (lowerMessage.includes('what') || lowerMessage.includes('how') || lowerMessage.includes('tell me')) {
+        // Framework-specific help
+        if (lowerMessage.includes('framework') || lowerMessage.includes('criteria')) {
+          if (role.includes('1st Speaker') && motionInfo) {
+            return `As 1st Speaker for "${motion}", here's exactly what you should do:
 
-**Framework Establishment:**
+**Framework Setup:**
 "Ladies and gentlemen, today's debate centers on whether ${motion}. We win this debate if we prove that: (1) Systemic barriers prevent genuine meritocracy, (2) Privilege and inheritance create unequal starting positions, and (3) Cultural biases distort merit evaluation."
 
-**Why This Framework Favors Opposition:**
+**Why This Works:**
 Your criteria focus on structural reality rather than ideal theory. You can argue that even if meritocracy sounds good in theory, the practical reality makes it impossible.
 
-**Specific Examples to Use:**
-- Educational inequality: Students from wealthy families have 10x more resources for test prep
-- Corporate hiring: Studies show 70% of executives come from just 12% of universities
+**Specific Evidence:**
+- Educational inequality: Students from wealthy families have 10x more resources
+- Corporate hiring: 70% of executives come from just 12% universities
 - Gender/race disparities: Equal qualifications don't lead to equal outcomes
 
-**Rebuttal Strategy:**
+**Rebuttal Prep:**
 Expect Proposition to argue about "incentives" and "efficiency" - counter by showing these benefits don't materialize when the system is fundamentally unfair.
 
-Would you like me to help you develop specific arguments for each criterion?`;
-        } else {
-          return `As 1st Speaker for "${motion}", establish criteria that favor your position. For example: 'Ladies and gentlemen, today's debate centers on ${motion}. We win this debate if we prove that [your criteria 1], [criteria 2], and [criteria 3].' Your criteria should be measurable and favor your side.`;
-        }
-      } else {
-        return `Since you're ${role}, reference the established framework and show how your arguments fit within it. For example: 'Building on our framework of [criteria], my first point shows how ${motion} [achieves/fails to achieve] superior outcomes...'`;
-      }
-    }
-    
-    // Motion-specific argument suggestions
-    if (lowerMessage.includes('arguments') || lowerMessage.includes('points') || lowerMessage.includes('what could i say')) {
-      if (motionInfo) {
-        const isOpposition = role.toLowerCase().includes('opposition');
-        const debateArguments = isOpposition ? motionInfo.conArguments : motionInfo.proArguments;
-        const examples = motionInfo.realWorldExamples;
-        
-        return `For "${motion}" as ${role}, here are powerful arguments you could have made:
+Want me to help you develop the specific wording for each criterion?`;
+          } else if (!role.includes('1st Speaker')) {
+            return `As ${role}, here's exactly what to do:
 
-**Key Arguments:**
+**Reference the Framework:**
+"Building on our framework of [established criteria], my first point shows how ${motion} fails to achieve the stated goals..."
+
+**Your Job:**
+- Reference the established criteria that favor your side
+- Show how your arguments fit within that framework
+- Use the criteria to evaluate the opposition's arguments
+
+**Example:**
+"Building on our framework of equal opportunity, social mobility, and fairness, my first point demonstrates how ${motion} undermines genuine meritocracy through structural barriers..."
+
+Need help with specific arguments for your role?`;
+          }
+        }
+        
+        // Argument-specific help
+        else if (lowerMessage.includes('argument') || lowerMessage.includes('point') || lowerMessage.includes('say')) {
+          if (motionInfo) {
+            const isOpposition = role.toLowerCase().includes('opposition');
+            const debateArguments = isOpposition ? motionInfo.conArguments : motionInfo.proArguments;
+            const examples = motionInfo.realWorldExamples;
+            
+            return `Here are specific arguments you could make for "${motion}" as ${role}:
+
+**Main Arguments:**
 ${debateArguments.map((arg: string, i: number) => `${i + 1}. ${arg}`).join('\n')}
 
 **Real-World Evidence:**
 ${examples.map((example: string, i: number) => `${i + 1}. ${example}`).join('\n')}
 
-**Impact Analysis:**
-For each argument, use the "So What? Why This? How?" framework:
-- **So What?** - Explain why this point matters
-- **Why This?** - Show why it proves the motion
-- **How?** - Demonstrate the mechanism
+**How to Structure Each Point:**
+"First, [your argument]. **So what?** [explain why it matters]. **Why this?** [show how it proves the motion]. **How?** [demonstrate the mechanism]."
 
-**Example Structure:**
+**Example:**
 "First, unequal starting positions make meritocracy impossible. **So what?** This means people don't compete on equal footing. **Why this?** Because success depends on birth circumstances, not merit. **How?** Through inherited wealth, educational disparities, and cultural biases."
 
-Would you like me to help you develop any specific argument further?`;
-      }
-    }
-    
-    // Enhanced rebuttal strategies
-    if (lowerMessage.includes('rebuttal') || lowerMessage.includes('counter')) {
-      if (motionInfo) {
-        return `For "${motion}", here are powerful rebuttal strategies:
+Which argument would you like me to help you develop further?`;
+          }
+        }
+        
+        // Rebuttal help
+        else if (lowerMessage.includes('rebuttal') || lowerMessage.includes('counter') || lowerMessage.includes('opposition')) {
+          if (motionInfo) {
+            return `Here are specific rebuttal strategies for "${motion}":
 
-**If they argue "Meritocracy incentivizes hard work":**
-Counter: "Hard work means nothing without opportunity. Studies show people from disadvantaged backgrounds work just as hard but achieve less due to systemic barriers."
+**Common Proposition Arguments & Counters:**
 
-**If they argue "Efficiency and economic growth":**
-Counter: "Systems that exclude talent are inherently inefficient. We lose the contributions of capable people who lack privilege, reducing overall productivity."
+**If they say "Meritocracy incentivizes hard work":**
+Counter: "Hard work means nothing without opportunity. Studies show people from disadvantaged backgrounds work just as hard but achieve less due to systemic barriers. The issue isn't work ethic - it's access to opportunities."
 
-**If they argue "Reduces corruption":**
-Counter: "Meritocracy often hides corruption behind 'objective' criteria that actually favor privileged groups. This is worse than overt corruption because it's harder to identify."
+**If they say "Efficiency and economic growth":**
+Counter: "Systems that exclude talent are inherently inefficient. We lose the contributions of capable people who lack privilege, reducing overall productivity. True efficiency requires utilizing all talent, not just privileged talent."
+
+**If they say "Reduces corruption":**
+Counter: "Meritocracy often hides corruption behind 'objective' criteria that actually favor privileged groups. This is worse than overt corruption because it's harder to identify and address."
 
 **Rebuttal Structure:**
 1. Acknowledge their argument
-2. Show how your framework better evaluates the issue  
+2. Show how your framework better evaluates the issue
 3. Provide counter-examples
 4. Demonstrate greater impact
 
 **Example:**
-"While my opponent makes a valid point about incentives, they miss the fundamental question: can people even access those incentives? When 70% of opportunities go to people from the top 10% of income backgrounds, the 'incentives' only exist for the privileged."`;
-      }
-    }
-    
-    // Evidence and examples
-    if (lowerMessage.includes('evidence') || lowerMessage.includes('examples') || lowerMessage.includes('statistics')) {
-      if (motionInfo) {
-        return `Here's powerful evidence for "${motion}":
+"While my opponent makes a valid point about incentives, they miss the fundamental question: can people even access those incentives? When 70% of opportunities go to people from the top 10% of income backgrounds, the 'incentives' only exist for the privileged."
+
+Which specific argument do you need help rebutting?`;
+          }
+        }
+        
+        // Evidence help
+        else if (lowerMessage.includes('evidence') || lowerMessage.includes('example') || lowerMessage.includes('statistics') || lowerMessage.includes('data')) {
+          if (motionInfo) {
+            return `Here's specific evidence for "${motion}":
 
 **Educational Inequality:**
 - Students from top 1% income families are 77x more likely to attend Ivy League schools
@@ -189,16 +203,16 @@ Counter: "Meritocracy often hides corruption behind 'objective' criteria that ac
 - Résumés with 'white-sounding' names get 50% more callbacks
 - Only 6% of Fortune 500 CEOs are women despite being 50% of the population
 
-**Using This Evidence:**
-Always connect statistics to your framework criteria. For example: "This proves criterion 1 - systemic barriers prevent genuine meritocracy."
+**How to Use This Evidence:**
+Always connect statistics to your framework criteria. For example: "This proves criterion 1 - systemic barriers prevent genuine meritocracy because..."
 
-Would you like me to help you integrate this evidence into specific arguments?`;
-      }
-    }
-    
-    // Technique-specific guidance
-    if (lowerMessage.includes('technique') || lowerMessage.includes('how to')) {
-      return `For "${motion}" as ${role}, master these techniques:
+Which type of evidence do you need help integrating into your arguments?`;
+          }
+        }
+        
+        // Technique help
+        else if (lowerMessage.includes('technique') || lowerMessage.includes('how to') || lowerMessage.includes('method')) {
+          return `Here are specific techniques for "${motion}" as ${role}:
 
 **1. Claim-Warrant-Impact (CWI):**
 - Claim: "Meritocracy is a myth"
@@ -217,26 +231,36 @@ Would you like me to help you integrate this evidence into specific arguments?`;
 **5. Signposting:**
 "First, I'll demonstrate the structural barriers... Second, I'll show how privilege distorts merit... Finally, I'll prove the real-world consequences."
 
-Practice these techniques with the specific arguments for your motion!`;
-    }
-    
-    // Default enhanced response
-    return `I'm here to help you improve your debate performance on "${motion}" as ${role}! 
+**Practice with your motion:**
+Try using these techniques with the specific arguments about meritocracy. For example, use parallelism to list multiple ways meritocracy fails.
 
-I have comprehensive knowledge about this motion including:
-- Key arguments for both sides
-- Real-world examples and statistics
-- Effective debate techniques
-- Specific rebuttal strategies
+Which technique would you like me to help you practice?`;
+        }
+      }
+      
+      // If no specific intent detected, provide general help
+      return `I can help you with your debate performance on "${motion}" as ${role}! 
 
-I can help you with:
+Here's what I can do:
+
+**Specific Help:**
 - **Framework establishment** (if you're 1st Speaker)
-- **Argument development** with motion-specific content
+- **Argument development** with motion-specific content  
 - **Evidence integration** using real-world examples
-- **Rebuttal strategies** tailored to this motion
-- **Technique mastery** (CWI, parallelism, etc.)
+- **Rebuttal strategies** for common opposition arguments
+- **Technique mastery** (CWI, parallelism, rhetorical questions)
 
-What specific aspect of your performance or debate techniques would you like me to help you with?`;
+**Just ask me things like:**
+- "How do I establish a framework?"
+- "What arguments should I make?"
+- "Give me evidence for my points"
+- "How do I rebut their argument?"
+- "What techniques should I use?"
+
+What specific aspect of your debate would you like help with?`;
+    };
+    
+    return generateDynamicResponse();
   };
 
   const handleSendMessage = () => {
