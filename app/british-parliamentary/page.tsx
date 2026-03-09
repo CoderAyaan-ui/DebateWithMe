@@ -13,6 +13,8 @@ export default function BritishParliamentaryDebate() {
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [prepTimeUp, setPrepTimeUp] = useState(false);
+  const [isPrepPhase, setIsPrepPhase] = useState(true);
 
   useEffect(() => {
     // Generate motion and role when component mounts
@@ -82,6 +84,16 @@ export default function BritishParliamentaryDebate() {
     router.push(`/feedback?${params.toString()}`);
   };
 
+  const handlePrepTimeUp = () => {
+    setPrepTimeUp(true);
+    setIsPrepPhase(false);
+  };
+
+  const handleStartSpeech = () => {
+    setIsPrepPhase(false);
+    setIsTimeUp(false);
+  };
+
   const handleBackToHome = () => {
     router.push('/');
   };
@@ -115,65 +127,119 @@ export default function BritishParliamentaryDebate() {
 
         {/* Timer Section */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Speech Timer</h2>
-          <Timer 
-            initialMinutes={8} // 8 minutes
-            onTimeUp={() => setIsTimeUp(true)}
-          />
-          {isTimeUp && (
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            {isPrepPhase ? "Preparation Timer" : "Speech Timer"}
+          </h2>
+          {isPrepPhase ? (
+            <Timer 
+              initialMinutes={25} // 25 minutes prep time
+              onTimeUp={handlePrepTimeUp}
+            />
+          ) : (
+            <Timer 
+              initialMinutes={8} // 8 minutes speech time
+              onTimeUp={() => setIsTimeUp(true)}
+            />
+          )}
+          {prepTimeUp && (
+            <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+              <p className="text-orange-800 font-semibold">Preparation time is up! Start your speech.</p>
+              <button
+                onClick={handleStartSpeech}
+                className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+              >
+                Start Speech
+              </button>
+            </div>
+          )}
+          {isTimeUp && !isPrepPhase && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-800 font-semibold">Time's up! Please submit your speech.</p>
             </div>
           )}
         </div>
 
-        {/* Speech Recording Section */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Record Your Speech</h2>
-          
-          <div className="mb-4">
+        {/* Notepad Section - Only show during prep phase */}
+        {isPrepPhase && (
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Speech Preparation Notes</h2>
+            <Notepad 
+              initialText={speechText}
+              onTextChange={setSpeechText}
+              placeholder="Use this space to prepare your speech arguments. You can jot down key points, evidence, and structure your speech here..."
+            />
+          </div>
+        )}
+
+        {/* Speech Recording Section - Only show after prep phase */}
+        {!isPrepPhase && (
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Record Your Speech</h2>
+            
+            <div className="mb-4">
+              <button
+                onClick={isListening ? handleStopListening : handleStartListening}
+                className={`px-6 py-3 rounded-lg font-semibold transition ${
+                  isListening 
+                    ? 'bg-red-600 hover:bg-red-700 text-blue-100' 
+                    : 'bg-green-600 hover:bg-green-700 text-blue-100'
+                }`}
+              >
+                {isListening ? '⏹️ Stop Recording' : '🎤 Start Recording'}
+              </button>
+            </div>
+
+            {isListening && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-blue-800">🎤 Recording... Speak clearly into your microphone.</p>
+              </div>
+            )}
+
+            <div className="bg-gray-50 p-4 rounded-lg min-h-[150px] max-h-[300px] overflow-y-auto">
+              <h3 className="font-semibold mb-2">Your Speech Transcript:</h3>
+              <p className="text-gray-800 whitespace-pre-wrap">
+                {transcript || "Click 'Start Recording' to begin your speech..."}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons - Only show after prep phase */}
+        {!isPrepPhase && (
+          <div className="flex gap-4 justify-center">
             <button
-              onClick={isListening ? handleStopListening : handleStartListening}
-              className={`px-6 py-3 rounded-lg font-semibold transition ${
-                isListening 
-                  ? 'bg-red-600 hover:bg-red-700 text-blue-100' 
-                  : 'bg-green-600 hover:bg-green-700 text-blue-100'
-              }`}
+              onClick={handleSubmitSpeech}
+              disabled={!transcript.trim()}
+              className="px-8 py-3 bg-blue-600 text-blue-100 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-semibold"
             >
-              {isListening ? '⏹️ Stop Recording' : '🎤 Start Recording'}
+              Submit Speech
+            </button>
+            <button
+              onClick={handleBackToHome}
+              className="px-8 py-3 bg-gray-600 text-blue-100 rounded-lg hover:bg-gray-700 transition font-semibold"
+            >
+              Back to Home
             </button>
           </div>
+        )}
 
-          {isListening && (
-            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-blue-800">🎤 Recording... Speak clearly into your microphone.</p>
-            </div>
-          )}
-
-          <div className="bg-gray-50 p-4 rounded-lg min-h-[150px] max-h-[300px] overflow-y-auto">
-            <h3 className="font-semibold mb-2">Your Speech Transcript:</h3>
-            <p className="text-gray-800 whitespace-pre-wrap">
-              {transcript || "Click 'Start Recording' to begin your speech..."}
-            </p>
+        {/* Prep Phase Action Button */}
+        {isPrepPhase && (
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={handleStartSpeech}
+              className="px-8 py-3 bg-green-600 text-blue-100 rounded-lg hover:bg-green-700 transition font-semibold"
+            >
+              Finish Preparation & Start Speech
+            </button>
+            <button
+              onClick={handleBackToHome}
+              className="px-8 py-3 bg-gray-600 text-blue-100 rounded-lg hover:bg-gray-700 transition font-semibold"
+            >
+              Back to Home
+            </button>
           </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-4 justify-center">
-          <button
-            onClick={handleSubmitSpeech}
-            disabled={!transcript.trim()}
-            className="px-8 py-3 bg-blue-600 text-blue-100 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-semibold"
-          >
-            Submit Speech
-          </button>
-          <button
-            onClick={handleBackToHome}
-            className="px-8 py-3 bg-gray-600 text-blue-100 rounded-lg hover:bg-gray-700 transition font-semibold"
-          >
-            Back to Home
-          </button>
-        </div>
+        )}
       </div>
     </div>
   );
